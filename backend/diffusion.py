@@ -24,9 +24,7 @@ stage_2 = DiffusionPipeline.from_pretrained("DeepFloyd/IF-II-L-v1.0", text_encod
 stage_2.to(device)
 stage_2.enable_model_cpu_offload()
 
-safety_modules = {
-    "feature_extractor": stage_1.feature_extractor
-}
+safety_modules = {"feature_extractor": stage_1.feature_extractor}
 stage_3 = DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-x4-upscaler", **safety_modules, torch_dtype=torch.float16)
 stage_3.to(device)
 stage_3.enable_model_cpu_offload()
@@ -35,7 +33,7 @@ print("Diffusion models loaded and moved to device.")
 
 def generate_image(prompt: str) -> str:
     print("Generating image for prompt:", prompt)
-    generator = torch.manual_seed(1)
+    generator = torch.manual_seed(0)
 
     print("Encoding prompt...")
     # Text embeddings
