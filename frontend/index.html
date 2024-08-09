@@ -25,82 +25,113 @@
             </div>
         </div>
 
-        <!-- Progress bar -->
-        <div id="progress-container" class="progress-container">
-            <div id="progress-bar" class="progress-bar"></div>
+        <div id="imageContainer" class="image-container">
+            <!-- Generated image will appear here -->
         </div>
 
-        <div class="image-container" id="imageContainer">
-            <!-- Generated image will appear here -->
+        <div id="thumbnails" class="thumbnails">
+            <!-- Thumbnails of previous images will appear here -->
         </div>
     </div>
 
     <script>
-        document.getElementById("promptForm").addEventListener("submit", async function(event) {
-            event.preventDefault();
-            const prompt = document.getElementById("prompt").value;
+        const apiKey = 'YOUR_API_KEY'; // Replace with your actual API key
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const promptForm = document.getElementById("promptForm");
             const loading = document.getElementById("loading");
-            const progressContainer = document.getElementById("progress-container");
-            const progressBar = document.getElementById("progress-bar");
             const imageContainer = document.getElementById("imageContainer");
+            const thumbnails = document.getElementById("thumbnails");
 
-            // Show loading icon and progress bar
-            loading.style.display = 'flex';
-            progressContainer.style.display = 'block';
-            progressBar.style.width = '0%';
-            imageContainer.innerHTML = "";
+            // Load images from local storage on page load
+            loadThumbnails();
 
-            const apiKey = "your-secret-api-key"; // Replace with your actual API key
+            promptForm.addEventListener("submit", async function(event) {
+                event.preventDefault();
+                const prompt = document.getElementById("prompt").value;
 
-            try {
-                const response = await fetch(`/generate-image?api_key=${apiKey}`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ prompt })
-                });
+                // Show loading icon
+                loading.style.display = 'flex';
+                imageContainer.innerHTML = "";
 
-                if (response.ok) {
-                    const reader = response.body.getReader();
-                    const contentLength = +response.headers.get("Content-Length");
-                    let receivedLength = 0;
-                    let chunks = [];
-                    
-                    while(true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        chunks.push(value);
-                        receivedLength += value.length;
-                        progressBar.style.width = `${(receivedLength / contentLength) * 100}%`;
+                try {
+                    const response = await fetch("/generate-image", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${apiKey}` // Send API key as Authorization Bearer
+                        },
+                        body: JSON.stringify({ prompt })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const imgSrc = `data:image/png;base64,${data.image}`;
+                        displayImage(imgSrc, prompt);
+                        saveToLocalStorage(imgSrc, prompt);
+                    } else {
+                        alert("Error generating image. Please try again.");
                     }
-
-                    // Concatenate chunks into a single Uint8Array
-                    let chunksAll = new Uint8Array(receivedLength);
-                    let position = 0;
-                    for(let chunk of chunks) {
-                        chunksAll.set(chunk, position);
-                        position += chunk.length;
-                    }
-                    
-                    // Convert response to JSON
-                    const data = JSON.parse(new TextDecoder().decode(chunksAll));
-                    imageContainer.innerHTML = "";
-                    const imgElement = document.createElement("img");
-                    imgElement.src = `data:image/png;base64,${data.image}`;
-                    imgElement.alt = "Generated Image";
-                    imageContainer.appendChild(imgElement);
-
-                } else {
-                    alert("Error generating image. Please try again.");
+                } catch (error) {
+                    console.error("Error:", error);
+                    alert("An error occurred. Please try again.");
+                } finally {
+                    loading.style.display = 'none';
                 }
-            } catch (error) {
-                console.error("Error:", error);
-                alert("An error occurred. Please try again.");
-            } finally {
-                // Hide loading icon and progress bar
-                loading.style.display = 'none';
-                progressContainer.style.display = 'none';
+            });
+
+            function displayImage(imgSrc, prompt) {
+                imageContainer.innerHTML = `<img src="${imgSrc}" alt="Generated Image" />`;
+            }
+
+            function saveToLocalStorage(imgSrc, prompt) {
+                let images = JSON.parse(localStorage.getItem("images")) || [];
+                images.unshift({ imgSrc, prompt });
+                if (images.length > 20) {
+                    images = images.slice(0, 20); // Keep only the last 20 images
+                }
+                localStorage.setItem("images", JSON.stringify(images));
+                loadThumbnails();
+            }
+
+            function loadThumbnails() {
+                const images = JSON.parse(localStorage.getItem("images")) || [];
+                thumbnails.innerHTML = '';
+                images.forEach((img, index) => {
+                    const thumbContainer = document.createElement('div');
+                    thumbContainer.className = 'thumbnail-container';
+                    thumbContainer.innerHTML = `
+                        <div class="thumbnail-wrapper">
+                            <img src="${img.imgSrc}" alt="Thumbnail" class="thumbnail" />
+                            <div class="delete-icon" data-index="${index}">✖</div>
+                        </div>
+                    `;
+                    thumbContainer.querySelector('.delete-icon').addEventListener('click', () => deleteImage(index));
+                    thumbContainer.querySelector('img').addEventListener('click', () => showFullImage(img.imgSrc, img.prompt));
+                    thumbnails.appendChild(thumbContainer);
+                });
+            }
+
+            function deleteImage(index) {
+                let images = JSON.parse(localStorage.getItem("images")) || [];
+                images.splice(index, 1);
+                localStorage.setItem("images", JSON.stringify(images));
+                loadThumbnails();
+            }
+
+            function showFullImage(imgSrc, prompt) {
+                const fullImageContainer = document.createElement('div');
+                fullImageContainer.className = 'full-image-overlay';
+                fullImageContainer.innerHTML = `
+                    <div class="full-image-container">
+                        <img src="${imgSrc}" alt="Full Image" class="full-image-img"/>
+                        <p class="full-image-prompt">${prompt}</p>
+                    </div>
+                `;
+                fullImageContainer.addEventListener('click', () => {
+                    document.body.removeChild(fullImageContainer);
+                });
+                document.body.appendChild(fullImageContainer);
             }
         });
     </script>

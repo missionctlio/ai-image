@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Header, Request, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -10,30 +10,34 @@ app = FastAPI()
 # Mount the 'frontend' directory to serve static files
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
-# Replace with your actual API key
-API_KEY = "your-secret-api-key"
-
 class PromptRequest(BaseModel):
     prompt: str
 
 class ImageResponse(BaseModel):
     image: str  # Single base64 encoded image data
 
-# Middleware to check API key
-@app.middleware("http")
-async def check_api_key(request: Request, call_next):
-    api_key = request.query_params.get("api_key")
-    if api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    response = await call_next(request)
-    return response
-
 @app.post("/generate-image", response_model=ImageResponse)
-async def generate_image_endpoint(request: PromptRequest):
+async def generate_image_endpoint(
+    request: Request,
+    prompt_request: PromptRequest,
+    authorization: str = Header(None),
+    api_key: str = Query(None)
+):
     try:
+        # Determine which method to use for the API key
+        api_key = api_key or (authorization.split("Bearer ")[-1] if authorization and "Bearer " in authorization else None)
+        
+        if not api_key:
+            raise HTTPException(status_code=401, detail="API key is required")
+        
+        # Log or validate the API key if needed
+        print(f"API Key received: {api_key}")
+
         # Generate the image
-        image = generate_image(request.prompt)
+        image = generate_image(prompt_request.prompt)
+        
         return ImageResponse(image=image)
+
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
