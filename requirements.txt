@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+torch
+transformers
+diffusers
+pillow
+huggingface_hub
+accelerate
+numpy==2.0.0
+sentencepiece
