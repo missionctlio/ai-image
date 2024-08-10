@@ -1,6 +1,7 @@
 from accelerate import Accelerator
 from diffusers import DiffusionPipeline
 import torch
+import uuid
 
 # Initialize Accelerator
 accelerator = Accelerator()
@@ -12,8 +13,7 @@ base = DiffusionPipeline.from_pretrained(
     variant="fp16", 
     use_safetensors=True
 )
-base.to(accelerator.device)
-
+base.enable_model_cpu_offload()
 refiner = DiffusionPipeline.from_pretrained(
     "stabilityai/stable-diffusion-xl-refiner-1.0",
     text_encoder_2=base.text_encoder_2,
@@ -22,7 +22,7 @@ refiner = DiffusionPipeline.from_pretrained(
     use_safetensors=True,
     variant="fp16",
 )
-refiner.to(accelerator.device)
+refiner.enable_model_cpu_offload()
 
 def generate_image(prompt: str) -> str:
     n_steps = 40
@@ -43,8 +43,13 @@ def generate_image(prompt: str) -> str:
         image=image,
     ).images[0]
     
-    # Convert image to base64 string
-    return image_to_base64(image)
+    # Save image with unique UUID
+    image_id = str(uuid.uuid4())
+    image_path = f"frontend/images/{image_id}.png"
+    image.save(image_path)
+
+    # Return the relative path to the image
+    return image_id
 
 def image_to_base64(image) -> str:
     import io

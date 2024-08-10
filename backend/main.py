@@ -10,11 +10,14 @@ app = FastAPI()
 # Mount the 'frontend' directory to serve static files
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
+# Mount the 'images' directory to serve image files
+app.mount("/images", StaticFiles(directory="frontend/images"), name="images")
+
 class PromptRequest(BaseModel):
     prompt: str
-
 class ImageResponse(BaseModel):
-    image: str  # Single base64 encoded image data
+    image_url: str  # URL to the generated image
+
 
 @app.post("/generate-image", response_model=ImageResponse)
 async def generate_image_endpoint(
@@ -33,10 +36,11 @@ async def generate_image_endpoint(
         # Log or validate the API key if needed
         print(f"API Key received: {api_key}")
 
-        # Generate the image
-        image = generate_image(prompt_request.prompt)
+         # Generate the image
+        image_id = generate_image(prompt_request.prompt)
+        image_url = f"/images/{image_id}.png"
         
-        return ImageResponse(image=image)
+        return ImageResponse(image_url=image_url)
 
     except Exception as e:
         print(traceback.format_exc())

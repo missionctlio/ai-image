@@ -5,6 +5,7 @@ body {
     padding: 0;
     background-color: #333; /* Dark gray background */
     color: #fff;
+    overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
 .container {
@@ -12,6 +13,8 @@ body {
     flex-direction: column;
     align-items: center;
     padding: 20px;
+    position: relative; /* Ensure the loading overlay is positioned relative to the container */
+    max-width: calc(100% - 250px); /* Adjust to account for thumbnail width */
 }
 
 h1 {
@@ -20,7 +23,10 @@ h1 {
 
 .input-container {
     display: flex;
+    flex-direction: column; /* Stack input and button vertically on mobile */
     align-items: center;
+    gap: 10px; /* Add spacing between input and button */
+    width: 100%; /* Ensure full width */
 }
 
 input[type="text"] {
@@ -29,6 +35,9 @@ input[type="text"] {
     border-radius: 5px;
     background-color: #444;
     color: #fff;
+    font-size: 1em;
+    width: 100%; /* Full width on mobile */
+    max-width: 400px; /* Max width on larger screens */
 }
 
 button {
@@ -38,59 +47,74 @@ button {
     background-color: #555;
     color: #fff;
     cursor: pointer;
+    font-size: 1em;
+    width: 100%; /* Full width on mobile */
+    max-width: 400px; /* Max width on larger screens */
+    position: relative; /* Position relative to contain the loading dots */
 }
 
 button:hover {
     background-color: #666;
 }
 
-.loading {
-    display: none;
-    position: fixed;
+.button-text {
+    display: block; /* Show text by default */
+}
+
+.loading-dots {
+    display: none; /* Hidden by default */
+    position: absolute; /* Position absolute within the button */
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.8);
-    padding: 20px;
-    border-radius: 10px;
-    z-index: 1000;
-}
-
-.dots {
+    width: 40px;
+    height: 20px;
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
-    width: 60px;
 }
 
 .dot {
-    width: 15px;
-    height: 15px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     animation: blink 1.5s infinite;
 }
 
+/* Sequential color alternation */
 .dot:nth-child(1) {
-    background-color: #ff66b2;
     animation-delay: 0s;
 }
 
 .dot:nth-child(2) {
-    background-color: #0099ff;
     animation-delay: 0.5s;
 }
 
 .dot:nth-child(3) {
-    background-color: #ff66b2;
     animation-delay: 1s;
 }
 
+/* Keyframe animation for sequential color change */
 @keyframes blink {
-    0%, 100% {
+    0% {
         opacity: 0.5;
+        background-color: #ff66b2;
+    }
+    25% {
+        opacity: 1;
+        background-color: #0099ff;
     }
     50% {
+        opacity: 0.5;
+        background-color: #ff66b2;
+    }
+    75% {
         opacity: 1;
+        background-color: #0099ff;
+    }
+    100% {
+        opacity: 0.5;
+        background-color: #ff66b2;
     }
 }
 
@@ -101,29 +125,35 @@ button:hover {
 
 .thumbnails {
     position: fixed;
-    right: 10px;
-    top: 10px;
+    right: 0;
+    top: 0;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 10px;
+    padding: 10px;
     z-index: 1000;
+    background-color: #222; /* Background color of the thumbnail section */
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+    width: 100%;
+    max-width: 250px; /* Max width for the thumbnail section */
+    height: 100vh; /* Full viewport height */
+    overflow-y: auto; /* Enable vertical scrolling if needed */
+    box-sizing: border-box; /* Include padding in width calculations */
 }
 
 .thumbnail-container {
-    position: relative;
-}
-
-.thumbnail-wrapper {
-    position: relative;
+    position: relative; /* Contain the delete icon */
+    display: inline-block; /* Ensure the thumbnail container fits the content */
 }
 
 .thumbnail {
     cursor: pointer;
-    border: 2px solid #444;
     border-radius: 5px;
-    width: 100px;
-    height: 100px;
+    border: 2px solid #555; /* Border around the thumbnail */
+    width: 100%; /* Full width to fit within thumbnail container */
+    height: auto; /* Maintain aspect ratio */
+    max-width: 100%; /* Responsive max width */
     object-fit: cover;
     transition: transform 0.2s;
 }
@@ -145,8 +175,9 @@ button:hover {
     align-items: center;
     justify-content: center;
     color: #fff;
-    font-size: 12px;
+    font-size: 14px;
     z-index: 1;
+    transition: transform 0.2s ease-in-out; /* Smooth scaling transition */
 }
 
 .full-image-overlay {
@@ -157,21 +188,25 @@ button:hover {
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.8);
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    overflow: auto; /* Ensure overflow handling for full image */
 }
 
 .full-image-container {
     position: relative;
-    max-width: 90%;
-    max-height: 80%;
+    padding: 20px; /* Padding around the image */
+    max-width: calc(100% - 40px); /* Ensure the image fits within the viewport */
+    max-height: calc(100% - 40px); /* Ensure the image fits within the viewport */
+    box-sizing: border-box;
+    overflow: hidden; /* Hide overflow to maintain aspect ratio */
 }
 
 .full-image-img {
     max-width: 100%;
     max-height: 100%;
+    object-fit: contain; /* Ensure the entire image is visible */
 }
 
 .full-image-prompt {
@@ -179,4 +214,32 @@ button:hover {
     margin-top: 10px;
     text-align: center;
     font-size: 1.2em;
+}
+
+@media (max-width: 768px) {
+    .container {
+        max-width: 100%; /* Full width on smaller screens */
+    }
+
+    .thumbnails {
+        max-width: 50px; /* Adjust width on smaller screens */
+    }
+
+    .input-container {
+        flex-direction: column; /* Stack input and button vertically */
+    }
+
+    .thumbnail {
+        width: 100%; /* Full width on smaller screens */
+    }
+}
+
+@media (max-width: 480px) {
+    .delete-icon {
+        width: 15px;
+        height: 15px;
+        font-size: 10px;
+        top: 20px;
+        right: 15px;
+    }
 }
