@@ -29,17 +29,23 @@ h1 {
     width: 100%; /* Ensure full width */
 }
 
-input[type="text"] {
+textarea {
     padding: 10px;
     border: 1px solid #555;
     border-radius: 5px;
     background-color: #444;
     color: #fff;
     font-size: 1em;
-    width: 100%; /* Full width on mobile */
+    width: 100%;
     max-width: 400px; /* Max width on larger screens */
+    min-height: 100px; /* Adjust height as needed */
+    resize: vertical; /* Allow vertical resizing */
 }
 
+textarea:focus {
+    outline: none;
+    border-color: #666; /* Change border color on focus */
+}
 button {
     padding: 10px 20px;
     border: none;

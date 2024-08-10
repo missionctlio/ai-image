@@ -12,7 +12,7 @@
         <h1>Generate Images</h1>
         <form id="promptForm">
             <div class="input-container">
-                <input type="text" id="prompt" name="prompt" required placeholder="Enter a prompt">
+                <textarea id="prompt" name="prompt" required placeholder="What would you like to see?"></textarea>
                 <button type="submit">
                     <span class="button-text">Generate</span>
                     <div class="loading-dots" style="display: none;">
@@ -24,10 +24,6 @@
             </div>
         </form>
 
-        <div id="imageContainer" class="image-container">
-            <!-- Generated image will appear here -->
-        </div>
-        
         <div id="thumbnails" class="thumbnails">
             <!-- Thumbnails of previous images will appear here -->
         </div>
@@ -36,8 +32,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const promptForm = document.getElementById("promptForm");
-            const loading = document.getElementById("loading");
-            const imageContainer = document.getElementById("imageContainer");
             const thumbnails = document.getElementById("thumbnails");
 
             // Load images from local storage on page load
@@ -51,7 +45,6 @@
                 // Show loading icon
                 document.querySelector('.loading-dots').style.display = 'flex';
                 document.querySelector('.button-text').style.display = 'none';
-                imageContainer.innerHTML = "";
 
                 try {
                     const response = await fetch("/generate-image", {
@@ -81,16 +74,12 @@
             });
 
             function displayImage(imageUrl, prompt) {
-                imageContainer.innerHTML = `<img src="${imageUrl}" alt="Generated Image" />`;
                 showFullImage(imageUrl, prompt); // Display the image in a lightbox
             }
 
             function saveToLocalStorage(imageUrl, prompt) {
                 let images = JSON.parse(localStorage.getItem("images")) || [];
                 images.unshift({ imageUrl, prompt });
-                if (images.length > 20) {
-                    images = images.slice(0, 20); // Keep only the last 20 images
-                }
                 localStorage.setItem("images", JSON.stringify(images));
                 loadThumbnails();
             }
