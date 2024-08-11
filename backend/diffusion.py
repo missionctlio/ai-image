@@ -29,7 +29,7 @@ refiner = DiffusionPipeline.from_pretrained(
 refiner.enable_model_cpu_offload()
 
 def generate_image(prompt: str) -> str:
-    n_steps = 40
+    n_steps = 160
     high_noise_frac = 0.8
     aspect_ratio = 32 / 9
     initial_width = 2048
@@ -40,11 +40,10 @@ def generate_image(prompt: str) -> str:
         prompt=prompt,
         num_inference_steps=n_steps,
         denoising_end=high_noise_frac,
-        output_type="pil",  # Output as a PIL Image
+        output_type="latent",  # Output as a PIL Image
         # height=initial_height,
         # width=initial_width,
     ).images[0]
-    
     
     # Optionally refine the image
     image = refiner(
@@ -54,11 +53,12 @@ def generate_image(prompt: str) -> str:
         image=image,
     ).images[0]
       # Upscale and resize the image
-    # scaled_image = upscale_and_resize_image(image, aspect_ratio)
+
     # Save the image with a unique UUID
     image_id = str(uuid.uuid4())
     image_path = f"frontend/images/{image_id}.png"
-    image.save(image_path)
+    image_s = upscale_and_resize_image(image, 4)
+    image_s.save(image_path)
 
     # Return the relative path to the image
     return image_id
@@ -73,23 +73,16 @@ def image_to_base64(image) -> str:
     img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return img_str
 
-def upscale_and_resize_image(image: Image.Image, aspect_ratio: float) -> Image.Image:
+def upscale_and_resize_image(image: Image.Image, scale_factor: int) -> Image.Image:
     """
     Upscales the image using Real-ESRGAN and then resizes it to a final size with a 32:9 aspect ratio.
     """
     # Upscale the image
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = RealESRGAN(device, scale=4)
-    model.load_weights('weights/RealESRGAN_x8.pth', download=True)
+    model = RealESRGAN(device, scale=scale_factor)
+    model.load_weights('weights/RealESRGAN_x4.pth', download=True)
     
     # Predict returns a PIL Image, no need to convert it again
     sr_image = model.predict(image)
     
-    # Calculate the final dimensions based on the aspect ratio and target width
-    final_width = 5120
-    final_height = int(final_width / aspect_ratio)
-    
-    # Resize the image to the final calculated size
-    resized_image = sr_image.resize((final_width, final_height), Image.LANCZOS)
-    
-    return resized_image
+    return sr_image
