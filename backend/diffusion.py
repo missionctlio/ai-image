@@ -1,39 +1,15 @@
 import torch
-from diffusers import FluxTransformer2DModel, FluxPipeline
+from diffusers import FluxTransformer2DModel, FluxPipeline, DiffusionPipeline
 from transformers import T5EncoderModel
 from optimum.quanto import freeze, qfloat8, quantize
 import uuid
 from PIL import Image
 from RealESRGAN import RealESRGAN
 import base64
+import torch.multiprocessing
+import random
 
 print("Starting script...")
-
-# # Initialize Accelerator
-# accelerator = Accelerator()
-
-# # Load both base & refiner pipelines with accelerator support
-# print("Loading base pipeline...")
-# base = DiffusionPipeline.from_pretrained(
-#     "stabilityai/stable-diffusion-xl-base-1.0", 
-#     torch_dtype=torch.float16, 
-#     variant="fp16", 
-#     use_safetensors=True
-# )
-# base.enable_model_cpu_offload()
-# print("Base pipeline loaded.")
-
-# print("Loading refiner pipeline...")
-# refiner = DiffusionPipeline.from_pretrained(
-#     "stabilityai/stable-diffusion-xl-refiner-1.0",
-#     text_encoder_2=base.text_encoder_2,
-#     vae=base.vae,
-#     torch_dtype=torch.float16,
-#     use_safetensors=True,
-#     variant="fp16",
-# )
-# refiner.enable_model_cpu_offload()
-# print("Refiner pipeline loaded.")
 
 bfl_repo = "black-forest-labs/FLUX.1-dev"
 dtype = torch.bfloat16
@@ -65,6 +41,32 @@ pipe.text_encoder_2 = text_encoder_2
 pipe.enable_model_cpu_offload()
 print("FluxPipeline loaded and configured.")
 
+# Initialize Accelerator
+# accelerator = Accelerator()
+
+# Load both base & refiner pipelines with accelerator support
+# print("Loading base pipeline...")
+# base = DiffusionPipeline.from_pretrained(
+#     "stabilityai/stable-diffusion-xl-base-1.0", 
+#     torch_dtype=torch.float16, 
+#     variant="fp16", 
+#     use_safetensors=True
+# )
+# base.enable_model_cpu_offload()
+# print("Base pipeline loaded.")
+
+# print("Loading refiner pipeline...")
+# refiner = DiffusionPipeline.from_pretrained(
+#     "stabilityai/stable-diffusion-xl-refiner-1.0",
+#     text_encoder_2=base.text_encoder_2,
+#     vae=base.vae,
+#     torch_dtype=torch.float16,
+#     use_safetensors=True,
+#     variant="fp16",
+# )
+# refiner.enable_model_cpu_offload()
+# print("Refiner pipeline loaded.")
+
 def generate_image(prompt: str, aspect_ratio: str) -> str:
     print(f"Generating image with prompt: '{prompt}' and aspect ratio: '{aspect_ratio}'")
     
@@ -87,19 +89,41 @@ def generate_image(prompt: str, aspect_ratio: str) -> str:
     print("Generating image...")
     image = pipe(
         prompt=prompt,
-        guidance_scale=3.5,
-        output_type="pil",
+        guidance_scale=100,
         height=initial_height,
+        max_sequence_length=255,
         width=initial_width,
         num_inference_steps=14,
-        generator=torch.Generator("cpu").manual_seed(0)
+        generator=torch.Generator("cpu").manual_seed(random.randint(1, 123456))
     ).images[0]
-    print("Image generated.")
+    #Generate the image at the calculated size (2048x576 for 32:9)
+    # image = base(
+    #     prompt=prompt,
+    #     num_inference_steps=n_steps,
+    #     denoising_end=high_noise_frac,
+    #     output_type="latent",  # Output as a PIL Image
+    #     width=initial_width,
+    #     height=initial_height
+    # ).images[0]
+    
+    # # Optionally refine the image
+    # image = refiner(
+    #     prompt=prompt,
+    #     num_inference_steps=n_steps,
+    #     denoising_start=high_noise_frac,
+    #     image=image,
+    # ).images[0]
+      #Upscale and resize the image
 
+        
+    image_id = str(uuid.uuid4())
+    
+    print("Image generated.")
+    image_path = f"frontend/images/original_{image_id}.png"
+    image.save(image_path)
     print("Upscaling and resizing image...")
     image_s = upscale_and_resize_image(image, 4)
-    
-    image_id = str(uuid.uuid4())
+    print("Image resized and upscaled.")
     image_path = f"frontend/images/{image_id}.png"
     image_s.save(image_path)
     print(f"Saving final image to '{image_path}'...")

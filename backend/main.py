@@ -1,12 +1,17 @@
+# main.py
+
 from fastapi import FastAPI, HTTPException, Header, Request, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from backend.diffusion import generate_image
-# from backend.prompt_refiner import generate_description
+import os
 import traceback
-
+import logging
 app = FastAPI()
+
+# Set up logging configuration
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Mount the 'frontend' directory to serve static files
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
@@ -19,10 +24,9 @@ class PromptRequest(BaseModel):
     aspectRatio: str  # Added aspect ratio field
 
 class ImageResponse(BaseModel):
-    image_url: str  # URL to the generated image
-    description: str  # Generated description
+    task_id: str  # Task ID for polling status
 
-@app.post("/generate-image", response_model=ImageResponse)
+@app.post("/generate-image")
 async def generate_image_endpoint(
     request: Request,
     prompt_request: PromptRequest,
@@ -37,19 +41,31 @@ async def generate_image_endpoint(
             raise HTTPException(status_code=401, detail="API key is required")
         
         # Log or validate the API key if needed
-        print(f"API Key received: {api_key}")
-        print(f"User Prompt: {prompt_request.prompt}")
-        print(f"Aspect Ratio: {prompt_request.aspectRatio}")
+        logger.info(f"Prompt Request: {prompt_request}")
+        from backend.celery_config import generate_image_task  # Import Celery task
+        # Call the Celery task and get the task ID
+        task = generate_image_task.delay(prompt_request.prompt, prompt_request.aspectRatio)
+        return {"task_id": task.id}
 
-        # Generate the image with the provided aspect ratio
-        image_id = generate_image(prompt_request.prompt, prompt_request.aspectRatio)
-        image_url = f"/images/{image_id}.png"
-        
-        # Generate the description
-        description = "N/A"# generate_description(prompt_request.prompt)
-        
-        return ImageResponse(image_url=image_url, description=description)
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/task-status/{task_id}")
+async def get_task_status(task_id: str):
+    from celery.result import AsyncResult
 
+    try:
+        # Check the status of the task
+        result = AsyncResult(task_id)
+        if result.state == 'PENDING':
+            return {"status": 'PENDING'}
+        elif result.state == 'SUCCESS':
+            return {"status": 'SUCCESS', "result": result.result}
+        elif result.state == 'FAILURE':
+            return {"status": 'FAILURE', "result": str(result.info)}
+        else:
+            return {"status": result.state}
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))

@@ -9,3 +9,6 @@ accelerate
 numpy==2.0.0
 sentencepiece
 RealESRGAN
+celery 
+redis 
+fastapi[all]
