@@ -1,7 +1,6 @@
 # backend/prompt_refiner.py
 
 from llama_cpp import Llama
-
 import logging
 
 # Set up logging configuration
@@ -10,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 # Define model cache directory
 cache_dir = '/venv/models'
+
 # Load the LLaMA-3 model and tokenizer
 model_name = "QuantFactory/Meta-Llama-3-8B-instruct-GGUF"
 llm = Llama.from_pretrained(
@@ -31,10 +31,9 @@ llm = Llama.from_pretrained(
     inp_suffix="assistant\n\n",
 )
 
-
 def generate_prompt(prompt):
     prompt_content = f"prompt: {prompt}"
-    system_content = "You are a prompt refiner for an online store creating humorous prompts for customers that generate images for a wide variety of prints like T-shirts, hoodies, coffee mugs and hats. The prompts you generate must never be more than 77 tokens."
+    system_content = "You are a description generator for a wide variety of products like T-shirts, hoodies, coffee mugs, and hats. Create engaging and detailed product descriptions from the provided prompt."
     prompt = [
         {"role": "system", "content": system_content}, 
         {"role": "user", "content": prompt_content}
@@ -42,9 +41,10 @@ def generate_prompt(prompt):
     logger.info(prompt)
     return prompt
 
-def refine_prompt(user_prompt: str) -> str:
+def generate_description(user_prompt: str) -> str:
     answer = llm.create_chat_completion(
         messages=generate_prompt(user_prompt),
     )
-    logger.info(answer['choices'][0]['message']['content'])
-    return answer['choices'][0]['message']['content']
+    description = answer['choices'][0]['message']['content']
+    logger.info(description)
+    return description

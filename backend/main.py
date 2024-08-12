@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from backend.diffusion import generate_image
+from backend.prompt_refiner import generate_description
 import traceback
 
 app = FastAPI()
@@ -15,9 +16,10 @@ app.mount("/images", StaticFiles(directory="frontend/images"), name="images")
 
 class PromptRequest(BaseModel):
     prompt: str
+
 class ImageResponse(BaseModel):
     image_url: str  # URL to the generated image
-
+    description: str  # Generated description
 
 @app.post("/generate-image", response_model=ImageResponse)
 async def generate_image_endpoint(
@@ -35,12 +37,15 @@ async def generate_image_endpoint(
         
         # Log or validate the API key if needed
         print(f"API Key received: {api_key}")
-
-         # Generate the image
+        print(f"User Prompt: {prompt_request.prompt}")
+        # Generate the image
         image_id = generate_image(prompt_request.prompt)
         image_url = f"/images/{image_id}.png"
         
-        return ImageResponse(image_url=image_url)
+        # Generate the description
+        description = generate_description(prompt_request.prompt)
+        
+        return ImageResponse(image_url=image_url, description=description)
 
     except Exception as e:
         print(traceback.format_exc())

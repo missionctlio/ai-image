@@ -27,8 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 const imageUrl = data.image_url;
-                displayImage(imageUrl, prompt);
-                saveToLocalStorage(imageUrl, prompt);
+                const description = data.description;
+                displayImage(imageUrl, description);
+                saveToLocalStorage(imageUrl, prompt, description);
             } else {
                 alert("Error generating image. Please try again.");
             }
@@ -41,13 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function displayImage(imageUrl, prompt) {
-        showFullImage(imageUrl, prompt); // Display the image in a lightbox
+    function displayImage(imageUrl, description, prompt) {
+        showFullImage(imageUrl, description, prompt);
     }
 
-    function saveToLocalStorage(imageUrl, prompt) {
+    function saveToLocalStorage(imageUrl, prompt, description) {
         let images = JSON.parse(localStorage.getItem("images")) || [];
-        images.unshift({ imageUrl, prompt });
+        images.unshift({ imageUrl, prompt, description });
         localStorage.setItem("images", JSON.stringify(images));
         loadThumbnails();
     }
@@ -60,6 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
             thumb.src = img.imageUrl;
             thumb.alt = "Thumbnail";
             thumb.className = 'thumbnail';
+
+            const descriptionContainer = document.createElement('div');
+            descriptionContainer.className = 'description-container';
+            descriptionContainer.textContent = img.description;
+
             const deleteIcon = document.createElement('div');
             deleteIcon.className = 'delete-icon';
             deleteIcon.textContent = '✖';
@@ -70,9 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const thumbContainer = document.createElement('div');
             thumbContainer.className = 'thumbnail-container';
             thumbContainer.appendChild(thumb);
+            thumbContainer.appendChild(descriptionContainer);
             thumbContainer.appendChild(deleteIcon);
-            
-            thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.prompt));
+
+            thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.description, img.prompt));
             thumbnails.appendChild(thumbContainer);
         });
     }
@@ -84,20 +91,75 @@ document.addEventListener('DOMContentLoaded', () => {
         loadThumbnails();
     }
 
-    function showFullImage(imageUrl, prompt) {
+    function showFullImage(imageUrl, description, prompt) {
+        // Create the full image overlay
         const fullImageContainer = document.createElement('div');
         fullImageContainer.className = 'full-image-overlay';
-        fullImageContainer.innerHTML = `
-            <div class="full-image-container">
-                <p class="full-image-prompt">${prompt}</p>
-                <img src="${imageUrl}" alt="Full Image" class="full-image-img" />
-            </div>
-        `;
-        fullImageContainer.addEventListener('click', () => {
-            document.body.removeChild(fullImageContainer);
+    
+        // Create the image container with the gradient background
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'full-image-container';
+    
+        // Create the prompt and description elements
+        const promptElement = document.createElement('p');
+        promptElement.className = 'full-image-prompt';
+        promptElement.textContent = `User Prompt: ${prompt}`;
+    
+        const descriptionElement = document.createElement('p');
+        descriptionElement.className = 'full-image-description';
+        descriptionElement.textContent = `Generated Description: ${description}`;
+    
+        // Create the buttons for toggling visibility
+        const promptButton = document.createElement('button');
+        promptButton.className = 'toggle-button';
+        promptButton.textContent = 'Show Prompt';
+        promptButton.addEventListener('click', () => {
+            promptElement.classList.toggle('visible');
+            promptButton.textContent = promptElement.classList.contains('visible') ? 'Hide Prompt' : 'Show Prompt';
         });
+    
+        const descriptionButton = document.createElement('button');
+        descriptionButton.className = 'toggle-button';
+        descriptionButton.textContent = 'Show Description';
+        descriptionButton.addEventListener('click', () => {
+            descriptionElement.classList.toggle('visible');
+            descriptionButton.textContent = descriptionElement.classList.contains('visible') ? 'Hide Description' : 'Show Description';
+        });
+    
+        // Create the full image element
+        const fullImage = document.createElement('img');
+        fullImage.src = imageUrl;
+        fullImage.alt = 'Full Image';
+        fullImage.className = 'full-image-img';
+    
+        // Create a container for the text and buttons
+        const textContainer = document.createElement('div');
+        textContainer.className = 'text-container';
+    
+        // Append buttons and text to the text container
+        textContainer.appendChild(promptButton);
+        textContainer.appendChild(descriptionButton);
+        textContainer.appendChild(promptElement);
+        textContainer.appendChild(descriptionElement);
+    
+        // Append elements to the image container
+        imageContainer.appendChild(textContainer);
+        imageContainer.appendChild(fullImage);
+    
+        // Append the image container to the overlay
+        fullImageContainer.appendChild(imageContainer);
+    
+        // Add an event listener to remove the overlay on click
+        fullImageContainer.addEventListener('click', (event) => {
+            if (event.target === fullImageContainer) {
+                document.body.removeChild(fullImageContainer);
+            }
+        });
+    
+        // Append the overlay to the body
         document.body.appendChild(fullImageContainer);
     }
+    
     
     
 });
