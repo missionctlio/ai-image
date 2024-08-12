@@ -1,96 +1,134 @@
-from accelerate import Accelerator
-from diffusers import DiffusionPipeline
 import torch
+from diffusers import FluxTransformer2DModel, FluxPipeline
+from transformers import T5EncoderModel
+from optimum.quanto import freeze, qfloat8, quantize
 import uuid
-from RealESRGAN import RealESRGAN
 from PIL import Image
-import numpy as np
+from RealESRGAN import RealESRGAN
+import base64
 
-# Initialize Accelerator
-accelerator = Accelerator()
+print("Starting script...")
 
-# Load both base & refiner pipelines with accelerator support
-base = DiffusionPipeline.from_pretrained(
-    "stabilityai/stable-diffusion-xl-base-1.0", 
-    torch_dtype=torch.float16, 
-    variant="fp16", 
-    use_safetensors=True
-)
-base.enable_model_cpu_offload()
+# # Initialize Accelerator
+# accelerator = Accelerator()
 
-refiner = DiffusionPipeline.from_pretrained(
-    "stabilityai/stable-diffusion-xl-refiner-1.0",
-    text_encoder_2=base.text_encoder_2,
-    vae=base.vae,
-    torch_dtype=torch.float16,
-    use_safetensors=True,
-    variant="fp16",
-)
-refiner.enable_model_cpu_offload()
+# # Load both base & refiner pipelines with accelerator support
+# print("Loading base pipeline...")
+# base = DiffusionPipeline.from_pretrained(
+#     "stabilityai/stable-diffusion-xl-base-1.0", 
+#     torch_dtype=torch.float16, 
+#     variant="fp16", 
+#     use_safetensors=True
+# )
+# base.enable_model_cpu_offload()
+# print("Base pipeline loaded.")
+
+# print("Loading refiner pipeline...")
+# refiner = DiffusionPipeline.from_pretrained(
+#     "stabilityai/stable-diffusion-xl-refiner-1.0",
+#     text_encoder_2=base.text_encoder_2,
+#     vae=base.vae,
+#     torch_dtype=torch.float16,
+#     use_safetensors=True,
+#     variant="fp16",
+# )
+# refiner.enable_model_cpu_offload()
+# print("Refiner pipeline loaded.")
+
+bfl_repo = "black-forest-labs/FLUX.1-dev"
+dtype = torch.bfloat16
+
+print(f"Loading FluxTransformer2DModel from URL with dtype {dtype}...")
+transformer = FluxTransformer2DModel.from_single_file("https://huggingface.co/Kijai/flux-fp8/blob/main/flux1-dev-fp8.safetensors", torch_dtype=dtype).to("cuda")
+# quantize(transformer, weights=qfloat8)
+# freeze(transformer)
+print("FluxTransformer2DModel loaded.")
+
+print("Quantizing and freezing FluxTransformer2DModel...")
+quantize(transformer, weights=qfloat8)
+freeze(transformer)
+print("FluxTransformer2DModel quantized and frozen.")
+
+print(f"Loading T5EncoderModel from {bfl_repo} with dtype {dtype}...")
+text_encoder_2 = T5EncoderModel.from_pretrained(bfl_repo, subfolder="text_encoder_2", torch_dtype=dtype)
+print("T5EncoderModel loaded.")
+
+print("Quantizing and freezing T5EncoderModel...")
+quantize(text_encoder_2, weights=qfloat8)
+freeze(text_encoder_2)
+print("T5EncoderModel quantized and frozen.")
+
+print("Loading FluxPipeline...")
+pipe = FluxPipeline.from_pretrained(bfl_repo, transformer=None, text_encoder_2=None, torch_dtype=dtype)
+pipe.transformer = transformer
+pipe.text_encoder_2 = text_encoder_2
+pipe.enable_model_cpu_offload()
+print("FluxPipeline loaded and configured.")
 
 def generate_image(prompt: str, aspect_ratio: str) -> str:
+    print(f"Generating image with prompt: '{prompt}' and aspect ratio: '{aspect_ratio}'")
+    
     n_steps = 160
     high_noise_frac = 0.8
     aspect_ratios = {
-    "16:9": (960, 544),  # (960 * 2, 544 * 2)
-    "4:3": (1024, 768),   # (800 * 2, 608 * 2)
-    "1:1": (1024, 1024),   # (512 * 2, 512 * 2)
-    "32:9": (1280, 368),  # (1920 * 2, 544 * 2)
-        # Add more aspect ratios as needed
+        "16:9": (960, 544),
+        "4:3": (1024, 768),
+        "1:1": (1024, 1024),
+        "32:9": (1280, 360),
     }
+    
     if aspect_ratio not in aspect_ratios:
+        print(f"Invalid aspect ratio '{aspect_ratio}'. Defaulting to '1:1'.")
         aspect_ratio = "1:1"  # Default aspect ratio if invalid
-
+    
     initial_width, initial_height = aspect_ratios[aspect_ratio]
+    print(f"Using dimensions: width={initial_width}, height={initial_height}")
     
-    # Generate the image at the calculated size (2048x576 for 32:9)
-    image = base(
+    print("Generating image...")
+    image = pipe(
         prompt=prompt,
-        num_inference_steps=n_steps,
-        denoising_end=high_noise_frac,
-        output_type="latent",  # Output as a PIL Image
+        guidance_scale=3.5,
+        output_type="pil",
+        height=initial_height,
         width=initial_width,
-        height=initial_height
+        num_inference_steps=14,
+        generator=torch.Generator("cpu").manual_seed(0)
     ).images[0]
-    
-    # Optionally refine the image
-    image = refiner(
-        prompt=prompt,
-        num_inference_steps=n_steps,
-        denoising_start=high_noise_frac,
-        image=image,
-    ).images[0]
-      #Upscale and resize the image
+    print("Image generated.")
 
-    # Save the image with a unique UUID
+    print("Upscaling and resizing image...")
+    image_s = upscale_and_resize_image(image, 4)
+    
     image_id = str(uuid.uuid4())
     image_path = f"frontend/images/{image_id}.png"
-    image_s = upscale_and_resize_image(image, 4)
     image_s.save(image_path)
+    print(f"Saving final image to '{image_path}'...")
+    print("Image saved.")
 
-    # Return the relative path to the image
     return image_id
 
 def image_to_base64(image) -> str:
     import io
-    from PIL import Image
-    import base64
 
+    print("Converting image to base64...")
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    print("Image converted to base64.")
     return img_str
 
 def upscale_and_resize_image(image: Image.Image, scale_factor: int) -> Image.Image:
     """
     Upscales the image using Real-ESRGAN and then resizes it to a final size with a 32:9 aspect ratio.
     """
-    # Upscale the image
+    print(f"Upscaling image with scale factor {scale_factor}...")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
     model = RealESRGAN(device, scale=scale_factor)
     model.load_weights('weights/RealESRGAN_x8.pth', download=True)
+    print("Real-ESRGAN model initialized and weights loaded.")
     
-    # Predict returns a PIL Image, no need to convert it again
     sr_image = model.predict(image)
+    print("Image upscaled.")
     
     return sr_image

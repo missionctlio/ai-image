@@ -93,85 +93,86 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showFullImage(imageUrl, description, aspectRatio, prompt) {
-        // Create the full image overlay
-        const fullImageContainer = document.createElement('div');
-        fullImageContainer.className = 'full-image-overlay';
+    // Create the full image overlay
+    const fullImageContainer = document.createElement('div');
+    fullImageContainer.className = 'full-image-overlay';
     
-        // Create the image container with the gradient background
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'full-image-container';
+    // Create the image container with the gradient background
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'full-image-container';
     
-        // Create the prompt and description elements
-        const promptElement = document.createElement('p');
-        promptElement.className = 'full-image-prompt';
-        promptElement.textContent = `User Prompt: ${prompt}`;
+    // Create the prompt and description elements
+    const promptElement = document.createElement('p');
+    promptElement.className = 'full-image-prompt';
+    promptElement.textContent = `Prompt: ${prompt}`;
     
-        const descriptionElement = document.createElement('p');
-        descriptionElement.className = 'full-image-description';
-        descriptionElement.textContent = `Generated Description: ${description}`;
+    const descriptionElement = document.createElement('p');
+    descriptionElement.className = 'full-image-description';
+    descriptionElement.textContent = `Description: ${description}`;
     
-        const aspectRatioElement = document.createElement('p');
-        aspectRatioElement.className = 'full-image-aspect-ratio';
-        aspectRatioElement.textContent = `Aspect Ratio: ${aspectRatio}`;
+    const aspectRatioElement = document.createElement('p');
+    aspectRatioElement.className = 'full-image-aspect-ratio';
+    aspectRatioElement.textContent = `Aspect Ratio: ${aspectRatio}`;
     
-        // Create the buttons for toggling visibility
-        const promptButton = document.createElement('button');
-        promptButton.className = 'toggle-button';
-        promptButton.textContent = 'Show Prompt';
-        promptButton.addEventListener('click', () => {
-            promptElement.classList.toggle('visible');
-            promptButton.textContent = promptElement.classList.contains('visible') ? 'Hide Prompt' : 'Show Prompt';
-        });
+    // Create the buttons for toggling visibility
+    const promptButton = document.createElement('button');
+    promptButton.className = 'toggle-button';
+    promptButton.textContent = 'Show Prompt';
+    promptButton.addEventListener('click', () => {
+        promptElement.classList.toggle('visible');
+        promptButton.textContent = promptElement.classList.contains('visible') ? 'Hide Prompt' : 'Show Prompt';
+    });
     
-        const descriptionButton = document.createElement('button');
-        descriptionButton.className = 'toggle-button';
-        descriptionButton.textContent = 'Show Description';
-        descriptionButton.addEventListener('click', () => {
-            descriptionElement.classList.toggle('visible');
-            descriptionButton.textContent = descriptionElement.classList.contains('visible') ? 'Hide Description' : 'Show Description';
-        });
+    const descriptionButton = document.createElement('button');
+    descriptionButton.className = 'toggle-button';
+    descriptionButton.textContent = 'Show Description';
+    descriptionButton.addEventListener('click', () => {
+        descriptionElement.classList.toggle('visible');
+        descriptionButton.textContent = descriptionElement.classList.contains('visible') ? 'Hide Description' : 'Show Description';
+    });
 
-        const aspectRatioButton = document.createElement('button');
-        aspectRatioButton.className = 'toggle-button';
-        aspectRatioButton.textContent = 'Show Aspect Ratio';
-        aspectRatioButton.addEventListener('click', () => {
-            aspectRatioElement.classList.toggle('visible');
-            aspectRatioButton.textContent = aspectRatioElement.classList.contains('visible') ? 'Hide Aspect Ratio' : 'Show Aspect Ratio';
-        });
+    const aspectRatioButton = document.createElement('button');
+    aspectRatioButton.className = 'toggle-button';
+    aspectRatioButton.textContent = 'Show Aspect Ratio';
+    aspectRatioButton.addEventListener('click', () => {
+        aspectRatioElement.classList.toggle('visible');
+        aspectRatioButton.textContent = aspectRatioElement.classList.contains('visible') ? 'Hide Aspect Ratio' : 'Show Aspect Ratio';
+    });
     
-        // Create the full image element
-        const fullImage = document.createElement('img');
-        fullImage.src = imageUrl;
-        fullImage.alt = 'Full Image';
-        fullImage.className = 'full-image-img';
+    // Create the full image element
+    const fullImage = document.createElement('img');
+    fullImage.src = imageUrl;
+    fullImage.alt = 'Full Image';
+    fullImage.className = 'full-image-img';
     
-        // Create a container for the text and buttons
-        const textContainer = document.createElement('div');
-        textContainer.className = 'text-container';
+    // Create a container for the text and buttons
+    const textContainer = document.createElement('div');
+    textContainer.className = 'text-container';
     
-        // Append buttons and text to the text container
-        textContainer.appendChild(promptButton);
-        textContainer.appendChild(descriptionButton);
-        textContainer.appendChild(aspectRatioButton);
-        textContainer.appendChild(promptElement);
-        textContainer.appendChild(descriptionElement);
-        textContainer.appendChild(aspectRatioElement);
+    // Append buttons and text to the text container
+    textContainer.appendChild(promptButton);
+    textContainer.appendChild(descriptionButton);
+    textContainer.appendChild(aspectRatioButton);
+    textContainer.appendChild(promptElement);
+    textContainer.appendChild(descriptionElement);
+    textContainer.appendChild(aspectRatioElement);
     
-        // Append elements to the image container
-        imageContainer.appendChild(textContainer);
-        imageContainer.appendChild(fullImage);
+    // Append elements to the image container
+    imageContainer.appendChild(fullImage);
+    imageContainer.appendChild(textContainer);
     
-        // Append the image container to the overlay
-        fullImageContainer.appendChild(imageContainer);
+    // Append the image container to the overlay
+    fullImageContainer.appendChild(imageContainer);
     
-        // Add an event listener to remove the overlay on click
-        fullImageContainer.addEventListener('click', (event) => {
-            if (event.target === fullImageContainer) {
-                document.body.removeChild(fullImageContainer);
-            }
-        });
+    // Add an event listener to remove the overlay on click
+    fullImageContainer.addEventListener('click', (event) => {
+        if (event.target === fullImageContainer) {
+            document.body.removeChild(fullImageContainer);
+        }
+    });
     
-        // Append the overlay to the body
-        document.body.appendChild(fullImageContainer);
-    }
+    // Append the overlay to the body
+    document.body.appendChild(fullImageContainer);
+}
+
 });

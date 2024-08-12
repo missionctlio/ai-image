@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from backend.diffusion import generate_image
-from backend.prompt_refiner import generate_description
+# from backend.prompt_refiner import generate_description
 import traceback
 
 app = FastAPI()
@@ -46,7 +46,7 @@ async def generate_image_endpoint(
         image_url = f"/images/{image_id}.png"
         
         # Generate the description
-        description = generate_description(prompt_request.prompt)
+        description = "N/A"# generate_description(prompt_request.prompt)
         
         return ImageResponse(image_url=image_url, description=description)
 
