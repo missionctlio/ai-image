@@ -28,12 +28,20 @@ refiner = DiffusionPipeline.from_pretrained(
 )
 refiner.enable_model_cpu_offload()
 
-def generate_image(prompt: str) -> str:
+def generate_image(prompt: str, aspect_ratio: str) -> str:
     n_steps = 160
     high_noise_frac = 0.8
-    aspect_ratio = 32 / 9
-    initial_width = 2048
-    initial_height = int(initial_width / aspect_ratio)
+    aspect_ratios = {
+    "16:9": (960, 544),  # (960 * 2, 544 * 2)
+    "4:3": (1024, 768),   # (800 * 2, 608 * 2)
+    "1:1": (1024, 1024),   # (512 * 2, 512 * 2)
+    "32:9": (1280, 368),  # (1920 * 2, 544 * 2)
+        # Add more aspect ratios as needed
+    }
+    if aspect_ratio not in aspect_ratios:
+        aspect_ratio = "1:1"  # Default aspect ratio if invalid
+
+    initial_width, initial_height = aspect_ratios[aspect_ratio]
     
     # Generate the image at the calculated size (2048x576 for 32:9)
     image = base(
@@ -41,8 +49,8 @@ def generate_image(prompt: str) -> str:
         num_inference_steps=n_steps,
         denoising_end=high_noise_frac,
         output_type="latent",  # Output as a PIL Image
-        # height=initial_height,
-        # width=initial_width,
+        width=initial_width,
+        height=initial_height
     ).images[0]
     
     # Optionally refine the image
@@ -52,7 +60,7 @@ def generate_image(prompt: str) -> str:
         denoising_start=high_noise_frac,
         image=image,
     ).images[0]
-      # Upscale and resize the image
+      #Upscale and resize the image
 
     # Save the image with a unique UUID
     image_id = str(uuid.uuid4())
@@ -80,7 +88,7 @@ def upscale_and_resize_image(image: Image.Image, scale_factor: int) -> Image.Ima
     # Upscale the image
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = RealESRGAN(device, scale=scale_factor)
-    model.load_weights('weights/RealESRGAN_x4.pth', download=True)
+    model.load_weights('weights/RealESRGAN_x8.pth', download=True)
     
     # Predict returns a PIL Image, no need to convert it again
     sr_image = model.predict(image)

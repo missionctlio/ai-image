@@ -13,6 +13,13 @@
         <form id="promptForm">
             <div class="input-container">
                 <textarea id="prompt" name="prompt" required placeholder="What would you like to see?"></textarea>
+                <select id="aspectRatio" name="aspectRatio">
+                    <option value="1:1">1:1</option>
+                    <option value="4:3">4:3</option>
+                    <!-- <option value="16:9">16:9</option>
+                    <option value="32:9">32:9</option> -->
+                    <!-- Add more options as needed -->
+                </select>
                 <button type="submit">
                     <span class="button-text">Generate</span>
                     <div class="loading-dots" style="display: none;">
@@ -23,6 +30,7 @@
                 </button>
             </div>
         </form>
+        
 
         <div id="thumbnails" class="thumbnails">
             <!-- Thumbnails of previous images will appear here -->

@@ -16,6 +16,7 @@ app.mount("/images", StaticFiles(directory="frontend/images"), name="images")
 
 class PromptRequest(BaseModel):
     prompt: str
+    aspectRatio: str  # Added aspect ratio field
 
 class ImageResponse(BaseModel):
     image_url: str  # URL to the generated image
@@ -38,8 +39,10 @@ async def generate_image_endpoint(
         # Log or validate the API key if needed
         print(f"API Key received: {api_key}")
         print(f"User Prompt: {prompt_request.prompt}")
-        # Generate the image
-        image_id = generate_image(prompt_request.prompt)
+        print(f"Aspect Ratio: {prompt_request.aspectRatio}")
+
+        # Generate the image with the provided aspect ratio
+        image_id = generate_image(prompt_request.prompt, prompt_request.aspectRatio)
         image_url = f"/images/{image_id}.png"
         
         # Generate the description

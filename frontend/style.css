@@ -151,10 +151,9 @@ button:hover {
     gap: 10px;
     padding: 10px;
     z-index: 1000;
-    background-color: #222; /* Background color of the thumbnail section */
     box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
     width: 100%;
-    max-width: 250px; /* Max width for the thumbnail section */
+    max-width: 15vh; /* Max width for the thumbnail section */
     height: 100vh; /* Full viewport height */
     overflow-y: auto; /* Enable vertical scrolling if needed */
     box-sizing: border-box; /* Include padding in width calculations */
@@ -239,7 +238,7 @@ button:hover {
     width: 100%; /* Ensure full width to accommodate text */
 }
 
-.full-image-prompt, .full-image-description {
+.full-image-prompt, .full-image-description, .full-image-aspect-ratio {
     color: #fff;
     font-size: 1.1em;
     margin: 0;
@@ -249,7 +248,7 @@ button:hover {
     display: none; /* Hidden by default */
 }
 
-.full-image-prompt.visible, .full-image-description.visible {
+.full-image-prompt.visible, .full-image-description.visible, .full-image-aspect-ratio.visible {
     display: block; /* Show when the 'visible' class is added */
 }
 
@@ -298,4 +297,79 @@ button:hover {
 
 .toggle-button:hover {
     background-color: #666;
+}
+
+/* Dropdown container styles */
+.dropdown-container {
+    position: relative;
+    width: 100%;
+    max-width: 400px; /* Match the maximum width of other inputs */
+}
+
+/* Dropdown button styles */
+.dropdown-button {
+    padding: 10px;
+    border: 1px solid #555;
+    border-radius: 5px;
+    background-color: #444;
+    color: #fff;
+    font-size: 1em;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    text-align: left;
+}
+
+/* Dropdown arrow styles */
+.dropdown-button::after {
+    content: '▼'; /* Unicode character for dropdown arrow */
+    font-size: 0.8em;
+    margin-left: 10px;
+    color: #aaa;
+}
+
+/* Dropdown menu styles */
+.dropdown-menu {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 100%; /* Position below the button */
+    left: 0;
+    width: 100%;
+    background-color: #444;
+    border: 1px solid #555;
+    border-radius: 5px;
+    z-index: 1000; /* Ensure it appears above other elements */
+}
+
+/* Dropdown item styles */
+.dropdown-item {
+    padding: 10px;
+    color: #fff;
+    cursor: pointer;
+    text-align: left;
+    font-size: 1em;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: #555;
+}
+
+/* Show dropdown menu on button click */
+.dropdown-container.show .dropdown-menu {
+    display: block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+    .dropdown-button {
+        font-size: 0.9em;
+    }
+
+    .dropdown-item {
+        font-size: 0.9em;
+    }
 }

@@ -16,8 +16,8 @@ llm = Llama.from_pretrained(
     repo_id=model_name,
     filename="Meta-Llama-3-8B-Instruct.Q8_0.gguf",
     n_gpu_layers=-1,
-    n_ctx=8192,
-    n_predict=-1,
+    n_ctx=512,
+    n_predict=100,
     top_k=40,
     repeat_penalty=1.1,
     min_p=0.05,
@@ -33,7 +33,7 @@ llm = Llama.from_pretrained(
 
 def generate_prompt(prompt):
     prompt_content = f"prompt: {prompt}"
-    system_content = "You are a description generator for a wide variety of products like T-shirts, hoodies, coffee mugs, and hats. Create engaging and detailed product descriptions from the provided prompt."
+    system_content = "You are a description generator for a wide variety of products. Create engaging and detailed product descriptions from the provided prompt."
     prompt = [
         {"role": "system", "content": system_content}, 
         {"role": "user", "content": prompt_content}

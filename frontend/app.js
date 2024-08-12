@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     promptForm.addEventListener("submit", async function(event) {
         event.preventDefault();
         const prompt = document.getElementById("prompt").value;
+        const aspectRatio = document.getElementById("aspectRatio").value;
         const apiKey = 'your-api-key-here'; // Replace with actual API key
 
         // Show loading icon
@@ -21,15 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${apiKey}`
                 },
-                body: JSON.stringify({ prompt })
+                body: JSON.stringify({ prompt, aspectRatio })
             });
 
             if (response.ok) {
                 const data = await response.json();
                 const imageUrl = data.image_url;
                 const description = data.description;
-                displayImage(imageUrl, description);
-                saveToLocalStorage(imageUrl, prompt, description);
+                displayImage(imageUrl, description, aspectRatio, prompt);
+                saveToLocalStorage(imageUrl, prompt, description, aspectRatio);
             } else {
                 alert("Error generating image. Please try again.");
             }
@@ -42,13 +43,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function displayImage(imageUrl, description, prompt) {
-        showFullImage(imageUrl, description, prompt);
+    function displayImage(imageUrl, description, aspectRatio, prompt) {
+        showFullImage(imageUrl, description, aspectRatio, prompt);
     }
 
-    function saveToLocalStorage(imageUrl, prompt, description) {
+    function saveToLocalStorage(imageUrl, prompt, description, aspectRatio) {
         let images = JSON.parse(localStorage.getItem("images")) || [];
-        images.unshift({ imageUrl, prompt, description });
+        images.unshift({ imageUrl, prompt, description, aspectRatio });
         localStorage.setItem("images", JSON.stringify(images));
         loadThumbnails();
     }
@@ -64,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const descriptionContainer = document.createElement('div');
             descriptionContainer.className = 'description-container';
-            descriptionContainer.textContent = img.description;
+            descriptionContainer.textContent = `Aspect Ratio: ${img.aspectRatio}`;
 
             const deleteIcon = document.createElement('div');
             deleteIcon.className = 'delete-icon';
@@ -79,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
             thumbContainer.appendChild(descriptionContainer);
             thumbContainer.appendChild(deleteIcon);
 
-            thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.description, img.prompt));
+            thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.description, img.aspectRatio, img.prompt));
             thumbnails.appendChild(thumbContainer);
         });
     }
@@ -91,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadThumbnails();
     }
 
-    function showFullImage(imageUrl, description, prompt) {
+    function showFullImage(imageUrl, description, aspectRatio, prompt) {
         // Create the full image overlay
         const fullImageContainer = document.createElement('div');
         fullImageContainer.className = 'full-image-overlay';
@@ -109,6 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
         descriptionElement.className = 'full-image-description';
         descriptionElement.textContent = `Generated Description: ${description}`;
     
+        const aspectRatioElement = document.createElement('p');
+        aspectRatioElement.className = 'full-image-aspect-ratio';
+        aspectRatioElement.textContent = `Aspect Ratio: ${aspectRatio}`;
+    
         // Create the buttons for toggling visibility
         const promptButton = document.createElement('button');
         promptButton.className = 'toggle-button';
@@ -125,6 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
             descriptionElement.classList.toggle('visible');
             descriptionButton.textContent = descriptionElement.classList.contains('visible') ? 'Hide Description' : 'Show Description';
         });
+
+        const aspectRatioButton = document.createElement('button');
+        aspectRatioButton.className = 'toggle-button';
+        aspectRatioButton.textContent = 'Show Aspect Ratio';
+        aspectRatioButton.addEventListener('click', () => {
+            aspectRatioElement.classList.toggle('visible');
+            aspectRatioButton.textContent = aspectRatioElement.classList.contains('visible') ? 'Hide Aspect Ratio' : 'Show Aspect Ratio';
+        });
     
         // Create the full image element
         const fullImage = document.createElement('img');
@@ -139,8 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Append buttons and text to the text container
         textContainer.appendChild(promptButton);
         textContainer.appendChild(descriptionButton);
+        textContainer.appendChild(aspectRatioButton);
         textContainer.appendChild(promptElement);
         textContainer.appendChild(descriptionElement);
+        textContainer.appendChild(aspectRatioElement);
     
         // Append elements to the image container
         imageContainer.appendChild(textContainer);
@@ -159,7 +174,4 @@ document.addEventListener('DOMContentLoaded', () => {
         // Append the overlay to the body
         document.body.appendChild(fullImageContainer);
     }
-    
-    
-    
 });
