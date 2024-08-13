@@ -20,7 +20,7 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 app.mount("/images", StaticFiles(directory="frontend/images"), name="images")
 
 # Include the API routes
-from backend.api import router as api_router
+from app.backend.api import router as api_router
 app.include_router(api_router)
 
 # Serve the index.html file at the root URL
