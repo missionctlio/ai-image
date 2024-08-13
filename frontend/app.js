@@ -50,11 +50,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const statusData = await statusResponse.json();
     
                 if (statusData.status === 'SUCCESS') {
-                    const { image_url: imageUrl, description } = statusData.result;
+                    const { image_url: imageUrl, description, refined_prompt: refinedPrompt } = statusData.result;
                     document.querySelector('.loading-dots').style.display = 'none';
                     document.querySelector('.button-text').style.display = 'block';
-                    displayImage(imageUrl, description, aspectRatio, prompt);
-                    saveToLocalStorage(imageUrl, prompt, description, aspectRatio);
+                    displayImage(imageUrl, description, refinedPrompt, aspectRatio, prompt);
+                    saveToLocalStorage(imageUrl, prompt, description, refinedPrompt, aspectRatio);
                 } else if (statusData.status === 'PENDING') {
                     const nextRetryTime = Date.now() + retryDelay;
                     if (nextRetryTime - Date.now() <= maxPollDuration) {
@@ -85,13 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function displayImage(imageUrl, description, aspectRatio, prompt) {
-        showFullImage(imageUrl, description, aspectRatio, prompt);
+    function displayImage(imageUrl, description, refinedPrompt, aspectRatio, prompt) {
+        showFullImage(imageUrl, description, refinedPrompt, aspectRatio, prompt);
     }
 
-    function saveToLocalStorage(imageUrl, prompt, description, aspectRatio) {
+    function saveToLocalStorage(imageUrl, prompt, description, refinedPrompt, aspectRatio) {
         const images = JSON.parse(localStorage.getItem("images")) || [];
-        images.unshift({ imageUrl, prompt, description, aspectRatio });
+        images.unshift({ imageUrl, prompt, description, refinedPrompt, aspectRatio });
         localStorage.setItem("images", JSON.stringify(images));
         loadThumbnails(); // Only load thumbnails after saving an image
     }
@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 thumb.src = img.imageUrl;
                 thumb.alt = "Thumbnail";
                 thumb.className = 'thumbnail';
-                thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.description, img.aspectRatio, img.prompt));
+                thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.description, img.refinedPrompt, img.aspectRatio, img.prompt));
 
                 const descriptionContainer = document.createElement('div');
                 descriptionContainer.className = 'description-container';
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function showFullImage(imageUrl, description, aspectRatio, prompt) {
+    function showFullImage(imageUrl, description, refinedPrompt, aspectRatio, prompt) {
         const fullImageContainer = document.createElement('div');
         fullImageContainer.className = 'full-image-overlay';
 
@@ -204,7 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
         closeButton.textContent = '×';
         imageContainer.appendChild(closeButton);
 
-        const promptElement = createTextElement('full-image-prompt', `Prompt: ${prompt}`);
+        const combinedPrompt = `Prompt: ${prompt}<br /><br /><br />Refined Prompt: ${refinedPrompt}`;
+        const promptElement = createTextElement('full-image-prompt', combinedPrompt);
         const descriptionElement = createTextElement('full-image-description', `Description: ${description}`);
         const aspectRatioElement = createTextElement('full-image-aspect-ratio', `Aspect Ratio: ${aspectRatio}`);
 
@@ -212,8 +213,16 @@ document.addEventListener('DOMContentLoaded', () => {
         textInfoContainer.className = 'text-info-container';
         textInfoContainer.append(promptElement, descriptionElement, aspectRatioElement);
 
+        const promptButton = document.createElement('button');
+        promptButton.className = 'toggle-button';
+        promptButton.textContent = 'Show Prompt Details';
+        promptButton.addEventListener('click', () => {
+            const isHidden = promptElement.classList.toggle('hidden');
+            promptButton.textContent = isHidden ? 'Show Prompt Details' : 'Hide Prompt Details';
+        });
+
         const buttons = [
-            createToggleButton(promptElement, 'Show Prompt'),
+            promptButton,
             createToggleButton(descriptionElement, 'Show Description'),
             createToggleButton(aspectRatioElement, 'Show Aspect Ratio')
         ];
@@ -251,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function createTextElement(className, textContent) {
         const element = document.createElement('p');
         element.className = `${className} hidden`;
-        element.textContent = textContent;
+        element.innerHTML = textContent;
         return element;
     }
 

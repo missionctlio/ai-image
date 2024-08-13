@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 
 @celery.task(name='app.workers.images.generate_image_task')
 def generate_image_task(prompt: str, aspect_ratio: str):
-    from app.inference.image.flux.diffuser import generate_image
     from app.inference.language.llama.description import generate_description
     from app.inference.language.llama.refinement import refined_prompt
+    from app.inference.image.flux.diffuser import generate_image
     try:
         # Optionally refine the prompt before generating the image
         refined_prompt_text = refined_prompt(prompt)
@@ -25,7 +25,7 @@ def generate_image_task(prompt: str, aspect_ratio: str):
         # Construct the image URL
         image_url = f"/images/original_{image_id}.png"
         
-        return {'image_url': image_url, 'description': description}
+        return {'image_url': image_url, 'refined_prompt': refined_prompt_text, 'description': description}
     except Exception as e:
         # Log the error or handle it as needed
         logger.error(f"Error in generate_image_task: {e}")

@@ -1,15 +1,20 @@
-# Image Generation and Management Web Application
+# Image Generation App
 
 ## Overview
 
-This project is a web application that generates and manages images based on user prompts. It allows users to submit prompts, view generated images, and manage their image collection. The application includes features for displaying image details, deleting individual images, and clearing all images.
+This application allows users to generate images based on text prompts. It integrates with an image generation API, displays results with detailed descriptions, and provides functionality for managing generated images.
 
 ## Features
 
-- **Image Generation**: Submit prompts and generate images with various aspect ratios.
-- **Image Display**: View full-sized images with associated prompts, descriptions, and aspect ratios.
-- **Image Management**: Delete individual images or clear all images from the collection.
-- **Responsive Design**: Optimized for both desktop and mobile views.
+- **Image Generation**: Submit prompts to generate images via the `/generate-image` API endpoint.
+- **Prompt Handling**: Displays both the original and refined prompts combined with a line break.
+- **Image Display**: View full-size images with associated details.
+- **Image Management**: Save generated images to local storage, view thumbnails, and delete images.
+- **Thumbnails**: Automatically load and display thumbnails of saved images.
+- **Polling**: Continuously check the status of image generation tasks with retries.
+- **Error Handling**: Provides feedback on errors and issues during the image generation and management process.
+- **Meta-Llama LLaMA3 Integration**: Uses Meta-Llama LLaMA3 for language-based prompt refinement and description generation.
+- **Black-Forest-Labs Flux Diffuser Integration**: Utilizes Black-Forest-Labs Flux Diffuser for the image diffusion process.
 
 ## Technologies Used
 
@@ -19,160 +24,180 @@ This project is a web application that generates and manages images based on use
   - JavaScript
 
 - **Backend**:
-  - Python
   - FastAPI
   - Celery
   - Redis
 
-- **Database**: 
-  - Local Storage (for storing images and metadata temporarily)
+- **Inference**:
+  - **Meta-Llama LLaMA3**: Used for language-based prompt refinement and description generation.
+  - **Black-Forest-Labs Flux Diffuser**: Utilized for the image diffusion process.
 
-- **Containerization**:
-  - Docker
-  - Docker Compose
 
-## Setup and Running
+- **Database**:
+  - Local Storage (for saving images and metadata)
+
+## API Endpoints
+
+### POST /generate-image
+
+Generates an image based on the provided prompt and aspect ratio.
+
+**Request Body:**
+
+```
+{
+    "prompt": "string",
+    "aspectRatio": "string"
+}
+```
+
+**Response:**
+
+```
+{
+    "task_id": "string"
+}
+```
+
+### GET /task-status/{taskId}
+
+Checks the status of the image generation task.
+
+**URL Parameters:**
+- `taskId`: The ID of the task to check.
+
+**Response:**
+
+```
+{
+    "status": "string",
+    "result": {
+        "image_url": "string",
+        "description": "string",
+        "refined_prompt": "string"
+    }
+}
+```
+
+### DELETE /delete-images/
+
+Deletes images from the server.
+
+**Request Body:**
+
+```
+{
+    "image_ids": ["string"]
+}
+```
+
+**Response:**
+
+```
+{
+    "status": "string"
+}
+```
+
+## Application Structure
+
+The application is organized into several components, each serving a specific purpose:
+
+- **Frontend**:
+  - `frontend/index.html`: Main HTML file for the user interface.
+  - `frontend/style.css`: CSS styles for the application.
+  - `frontend/app.js`: JavaScript handling UI interactions and API calls.
+
+- **Backend**:
+  - `app/api.py`: FastAPI application entry point.
+
+- **Inference**:
+  - **Image**:
+    - `app/inference/image/diffuser.py`: Image diffusion logic using the Black-Forest-Labs Flux Diffuser.
+    - `app/inference/image/model.py`: Model-related logic.
+  - **Language**:
+    - **Llama**:
+      - `app/inference/language/llama/description.py`: Description generation using Meta-Llama LLaMA3.
+      - `app/inference/language/llama/model.py`: Language model logic using Meta-Llama LLaMA3.
+      - `app/inference/language/llama/refinement.py`: Prompt refinement using Meta-Llama LLaMA3.
+
+- **Workers**:
+  - `app/workers/celery_config.py`: Celery configuration for workers.
+  - `app/workers/images.py`: Image processing tasks.
+
+- **Docker**:
+  - `docker-compose.yaml`: Defines the services for Docker Compose.
+  
+- **Startup** 
+  - `run.sh`: Script to build and run Docker containers.
+
+## Setup and Installation
 
 ### Prerequisites
 
-Ensure you have the following installed:
 - Docker
 - Docker Compose
-- Python 3.8 or higher
+- Python 3.x
 
 ### Running the Application
 
 1. **Clone the Repository**
 
    ```
-   git clone https://github.com/your-repo/image-management-app.git
-   cd image-management-app
+   git clone https://github.com/your-username/image-generation-app.git
    ```
 
-2. **Set Up the Environment**
-
-   Create a virtual environment and install dependencies:
+2. **Navigate to the Project Directory**
 
    ```
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
+   cd image-generation-app
    ```
 
-3. **Create Docker Containers**
+3. **Set Up the Environment**
 
-   Start the Docker containers in detached mode:
+   Ensure you have the necessary environment variables. Create a `.env` file in the project root directory with the following variables:
 
    ```
-   docker-compose up -d
+   HUGGINGFACE_TOKEN=<your token>
    ```
 
-4. **Start Celery Worker and Uvicorn Server**
-
-   Use the `run.sh` script to start the Celery worker and Uvicorn server:
+4. **Build and Run the Docker Containers**
 
    ```
    ./run.sh
    ```
 
-   Alternatively, you can run the commands manually:
+   This script performs the following actions:
+   - Activates a virtual environment.
+   - Starts the Celery worker.
+   - Runs the Uvicorn server with multiple workers and automatic reloading.
 
-   ```
-   source .venv/bin/activate
-   celery -A backend.celery_config.celery worker --pool=solo --loglevel=INFO &
-   uvicorn backend.main:app --workers 4 --host 0.0.0.0 --port 8888 --reload-dir backend
-   ```
+5. **Access the Application**
 
-## Endpoints
+   Open your browser and navigate to `http://localhost:8888` to use the application.
 
-### POST `/generate-image`
+## Usage
 
-**Description**: Submits a prompt and aspect ratio to generate an image.
+1. **Generating Images**
 
-**Request Body**:
+   - Enter a text prompt in the input field and submit the form.
+   - The app will display a loading indicator while the image is being generated.
+   - Once the image is ready, it will be displayed along with the prompt details.
 
-  ```
-  {
-    "prompt": "string",
-    "aspectRatio": "string"
-  }
-  ```
+2. **Viewing Images**
 
-  - **prompt**: The text prompt to generate the image from.
-  - **aspectRatio**: The desired aspect ratio of the generated image (e.g., "16:9", "4:3").
+   - Click on a thumbnail to view the full-size image with details.
+   - The full-size view includes options to show or hide details about the prompt, description, and aspect ratio.
 
-**Response**:
+3. **Managing Images**
 
-  ```
-  {
-    "task_id": "string"
-  }
-  ```
+   - Use the "Clear Images" button to delete all images from local storage and the server.
+   - Click the delete icon on individual thumbnails to remove specific images.
 
-  - **task_id**: A unique identifier for the image generation task. Use this ID to check the status of the task.
+## Contributing
 
-**Errors**:
-- `400 Bad Request`: Invalid request parameters.
-- `500 Internal Server Error`: Server encountered an error.
-
-### DELETE `/delete-images/`
-
-**Description**: Deletes specified images.
-
-**Request Body**:
-
-  ```
-  {
-    "image_ids": [
-      "string",
-      "string"
-    ]
-  }
-  ```
-
-  - **image_ids**: An array of image IDs to delete. This array should include both the original image ID and any variations (e.g., with or without "original_").
-
-**Response**:
-
-  ```
-  {
-    "success": true
-  }
-  ```
-
-  - **success**: Indicates whether the deletion operation was successful.
-
-**Errors**:
-- `400 Bad Request`: Invalid request parameters.
-- `404 Not Found`: One or more specified images were not found.
-- `500 Internal Server Error`: Server encountered an error.
-
-### GET `/task-status/{taskId}`
-
-**Description**: Retrieves the status of a specific image generation task.
-
-**Response**:
-
-  ```
-  {
-    "status": "SUCCESS" | "PENDING" | "FAILED",
-    "result": {
-      "image_url": "string",
-      "description": "string"
-    }
-  }
-  ```
-
-  - **status**: The current status of the task.
-  - **result**: Contains `image_url` and `description` if the task is successful.
-
-## Notes
-
-- Replace `https://github.com/your-repo/image-management-app.git` with the actual URL of your repository.
-- Ensure that environment variables and API keys are properly configured.
-- For any issues or feature requests, please open an issue on the project's GitHub page.
+Contributions are welcome! Please open an issue or submit a pull request if you would like to contribute to this project.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

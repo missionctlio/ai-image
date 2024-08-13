@@ -1,4 +1,23 @@
-docker-compose up -d
+#!/bin/bash
+
+# Check if the virtual environment exists
+if [ ! -d ".venv" ]; then
+    echo "Creating Python virtual environment..."
+    python -m venv .venv
+fi
+
+# Activate the virtual environment
 source .venv/bin/activate
-celery -A backend.celery_config.celery worker --pool=solo --loglevel=INFO &
-uvicorn backen.main:app  --workers 4 --host 0.0.0.0 --port 8888 --reload-dir backend
+
+# Update dependencies
+echo "Updating dependencies..."
+pip install -r requirements.txt > /dev/null
+
+# Start Docker containers
+docker-compose up -d
+
+# Start Celery worker
+celery -A app.workers.images worker --loglevel=info --pool=solo &
+
+# Start Uvicorn server
+uvicorn main:app --workers 4 --host 0.0.0.0 --port 8888 --reload

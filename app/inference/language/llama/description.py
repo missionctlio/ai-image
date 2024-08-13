@@ -1,12 +1,9 @@
-from app.inference.language.llama.model import load_llama_model
+from app.inference.language.llama.model import pipe
 import logging
 
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# Load LLaMA model
-llm = load_llama_model()
 
 def generate_description_prompt(prompt: str) -> list:
     prompt_content = f"prompt: {prompt}"
@@ -24,7 +21,7 @@ def generate_description_prompt(prompt: str) -> list:
 
 def generate_description(user_prompt: str) -> str:
     prompt = generate_description_prompt(user_prompt)
-    answer = llm.create_chat_completion(
+    answer = pipe().create_chat_completion(
         messages=prompt,
     )
     description = answer['choices'][0]['message']['content']

@@ -31,3 +31,6 @@ def load_llama_model() -> Llama:
     )
     logger.info("LLaMA model loaded successfully.")
     return llm
+
+def pipe() -> Llama:
+    return load_llama_model()
