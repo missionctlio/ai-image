@@ -25,6 +25,9 @@ class PromptRequest(BaseModel):
 
 class ImageResponse(BaseModel):
     task_id: str  # Task ID for polling status
+class DeleteImagesRequest(BaseModel):
+    image_ids: list[str]
+
 
 @app.post("/generate-image")
 async def generate_image_endpoint(
@@ -50,7 +53,56 @@ async def generate_image_endpoint(
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+@app.delete("/delete-images/")
+async def delete_images(request: DeleteImagesRequest):
+    IMAGE_DIR = "frontend/images"
+    if not request.image_ids:
+        logger.warning("No image IDs provided.")
+        raise HTTPException(status_code=400, detail="No image IDs provided")
+
+    deleted_files = []
+    not_found_files = []
+
+    logger.info(f"Attempting to delete {len(request.image_ids)} images.")
+
+    for image_id in request.image_ids:
+        # Construct file paths with and without 'original_' prefix
+        file_paths = [
+            os.path.join(IMAGE_DIR, image_id),
+            os.path.join(IMAGE_DIR, f"original_{image_id}")
+        ]
+
+        # Try deleting files with and without prefix
+        deleted = False
+        for file_path in file_paths:
+            if os.path.isfile(file_path):
+                try:
+                    os.remove(file_path)
+                    deleted_files.append(file_path)
+                    logger.info(f"Deleted file: {file_path}")
+                    deleted = True
+                    break  # Stop after deleting one version of the file
+                except Exception as e:
+                    logger.error(f"Failed to delete file: {file_path}. Error: {e}")
+
+        if not deleted:
+            not_found_files.append(image_id)
+            logger.warning(f"File not found for ID: {image_id}")
+
+    # Response based on the deletion results
+    if not_found_files:
+        response = {
+            "deleted_files": deleted_files,
+            "not_found_files": not_found_files,
+            "detail": "Some files were not found"
+        }
+        logger.info("Deletion completed with some files not found.")
+    else:
+        response = {"deleted_files": deleted_files, "detail": "All specified files deleted successfully"}
+        logger.info("All specified files deleted successfully.")
+
+    return response
 @app.get("/task-status/{task_id}")
 async def get_task_status(task_id: str):
     from celery.result import AsyncResult
@@ -58,9 +110,7 @@ async def get_task_status(task_id: str):
     try:
         # Check the status of the task
         result = AsyncResult(task_id)
-        if result.state == 'PENDING':
-            return {"status": 'PENDING'}
-        elif result.state == 'SUCCESS':
+        if result.state == 'SUCCESS':
             return {"status": 'SUCCESS', "result": result.result}
         elif result.state == 'FAILURE':
             return {"status": 'FAILURE', "result": str(result.info)}

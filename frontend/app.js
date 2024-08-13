@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load images from local storage on page load
     loadThumbnails();
 
-    promptForm.addEventListener("submit", async function(event) {
+    promptForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         const prompt = document.getElementById("prompt").value;
         const aspectRatio = document.getElementById("aspectRatio").value;
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 const taskId = data.task_id;
 
-                // Poll for task status
+                // Show loading indicator
                 document.querySelector('.loading-dots').style.display = 'flex';
                 document.querySelector('.button-text').style.display = 'none';
                 pollTaskStatus(taskId, prompt, aspectRatio);
@@ -38,26 +38,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function pollTaskStatus(taskId, prompt, aspectRatio) {
+    async function pollTaskStatus(taskId, prompt, aspectRatio, retryCount = 0) {
+        const maxRetries = 3;
+        const maxPollDuration = 4 * 60 * 1000; // 4 minutes
+        const retryDelay = 5000; // 5 seconds
+    
         try {
             const statusResponse = await fetch(`/task-status/${taskId}`);
-            
+    
             if (statusResponse.ok) {
                 const statusData = await statusResponse.json();
-                // Show loading icon
+    
                 if (statusData.status === 'SUCCESS') {
-                    const imageUrl = statusData.result.image_url;
-                    console.log(statusData.result.imageUrl)
-                    const description = statusData.result.description;
+                    const { image_url: imageUrl, description } = statusData.result;
                     document.querySelector('.loading-dots').style.display = 'none';
                     document.querySelector('.button-text').style.display = 'block';
                     displayImage(imageUrl, description, aspectRatio, prompt);
                     saveToLocalStorage(imageUrl, prompt, description, aspectRatio);
-                } else if (statusData.status === 'FAILURE') {
-                    alert(`Error: ${statusData.result}`);
+                } else if (statusData.status === 'PENDING') {
+                    const nextRetryTime = Date.now() + retryDelay;
+                    if (nextRetryTime - Date.now() <= maxPollDuration) {
+                        setTimeout(() => pollTaskStatus(taskId, prompt, aspectRatio, retryCount), retryDelay);
+                    } else {
+                        alert('Polling timed out. Please try again later.');
+                    }
+                } else if (retryCount < maxRetries) {
+                    console.warn(`Attempt ${retryCount + 1} failed. Retrying...`);
+                    setTimeout(() => pollTaskStatus(taskId, prompt, aspectRatio, retryCount + 1), retryDelay);
                 } else {
-                    // Poll again if status is still processing
-                    setTimeout(() => pollTaskStatus(taskId, prompt, aspectRatio), 2000); // Poll every 2 seconds
+                    alert(`Error: ${statusData.result}. Max retries reached.`);
+                }
+            } else if (statusResponse.status === 500) {
+                // Handle 500 Internal Server Error with retry
+                const nextRetryTime = Date.now() + retryDelay;
+                if (nextRetryTime - Date.now() <= maxPollDuration) {
+                    setTimeout(() => pollTaskStatus(taskId, prompt, aspectRatio, retryCount), retryDelay);
+                } else {
+                    alert('Server error. Max retries reached.');
                 }
             } else {
                 alert("Error retrieving task status. Please try again.");
@@ -67,148 +84,185 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("An error occurred while checking task status.");
         }
     }
-
+    
     function displayImage(imageUrl, description, aspectRatio, prompt) {
         showFullImage(imageUrl, description, aspectRatio, prompt);
     }
 
     function saveToLocalStorage(imageUrl, prompt, description, aspectRatio) {
-        let images = JSON.parse(localStorage.getItem("images")) || [];
+        const images = JSON.parse(localStorage.getItem("images")) || [];
         images.unshift({ imageUrl, prompt, description, aspectRatio });
         localStorage.setItem("images", JSON.stringify(images));
-        loadThumbnails();
+        loadThumbnails(); // Only load thumbnails after saving an image
     }
+
+    async function deleteImage(index) {
+        const images = JSON.parse(localStorage.getItem("images")) || [];
+        if (index >= 0 && index < images.length) {
+            const imageUrl = images[index].imageUrl;
+            const imageId = imageUrl.split('/').pop();
+            const originalImageId = imageId.replace('original_', '');
+
+            try {
+                const response = await fetch('/delete-images/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image_ids: [imageId, originalImageId] })
+                });
+
+                if (response.ok) {
+                    images.splice(index, 1);
+                    localStorage.setItem("images", JSON.stringify(images));
+                    loadThumbnails(); // Only load thumbnails after deleting an image
+                } else {
+                    alert("Error deleting image. Please try again.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred while deleting the image.");
+            }
+        }
+    }
+    
+    const clearThumbnailsButton = document.getElementById("clearThumbnails");
+    clearThumbnailsButton.addEventListener('click', async () => {
+        const images = JSON.parse(localStorage.getItem("images")) || [];
+        if (images.length > 0) {
+            const imageIds = images.flatMap(img => {
+                const imageId = img.imageUrl.split('/').pop();
+                const originalImageId = imageId.replace('original_', '');
+                return [imageId, originalImageId];
+            });
+
+            try {
+                const response = await fetch('/delete-images/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image_ids: imageIds })
+                });
+
+                if (response.ok) {
+                    localStorage.removeItem("images");
+                    loadThumbnails(); // Only load thumbnails after clearing all images
+                } else {
+                    alert("Error clearing images. Please try again.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred while clearing the images.");
+            }
+        }
+    });
 
     function loadThumbnails() {
         const images = JSON.parse(localStorage.getItem("images")) || [];
-        thumbnails.innerHTML = '';
-        images.forEach((img, index) => {
-            const thumb = document.createElement('img');
-            thumb.src = img.imageUrl;
-            thumb.alt = "Thumbnail";
-            thumb.className = 'thumbnail';
+        thumbnails.innerHTML = '<button id="clearThumbnails" class="clear-images-button">Clear Images</button>';
 
-            const descriptionContainer = document.createElement('div');
-            descriptionContainer.className = 'description-container';
-            descriptionContainer.textContent = `Aspect Ratio: ${img.aspectRatio}`;
+        if (images.length > 0) {
+            images.forEach((img, index) => {
+                const thumbContainer = document.createElement('div');
+                thumbContainer.className = 'thumbnail-container';
 
-            const deleteIcon = document.createElement('div');
-            deleteIcon.className = 'delete-icon';
-            deleteIcon.textContent = '✖';
-            deleteIcon.dataset.index = index;
-            deleteIcon.addEventListener('click', () => deleteImage(index));
+                const thumb = document.createElement('img');
+                thumb.src = img.imageUrl;
+                thumb.alt = "Thumbnail";
+                thumb.className = 'thumbnail';
+                thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.description, img.aspectRatio, img.prompt));
 
-            // Create thumbnail container
-            const thumbContainer = document.createElement('div');
-            thumbContainer.className = 'thumbnail-container';
-            thumbContainer.appendChild(thumb);
-            thumbContainer.appendChild(descriptionContainer);
-            thumbContainer.appendChild(deleteIcon);
+                const descriptionContainer = document.createElement('div');
+                descriptionContainer.className = 'description-container';
+                descriptionContainer.textContent = `Aspect Ratio: ${img.aspectRatio}`;
 
-            thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.description, img.aspectRatio, img.prompt));
-            thumbnails.appendChild(thumbContainer);
-        });
-    }
+                const deleteIcon = document.createElement('div');
+                deleteIcon.className = 'delete-icon';
+                deleteIcon.textContent = '×';
+                deleteIcon.dataset.index = index;
+                deleteIcon.addEventListener('click', () => deleteImage(index));
 
-    function deleteImage(index) {
-        let images = JSON.parse(localStorage.getItem("images")) || [];
-        images.splice(index, 1);
-        localStorage.setItem("images", JSON.stringify(images));
-        loadThumbnails();
+                thumbContainer.append(thumb, descriptionContainer, deleteIcon);
+                thumbnails.appendChild(thumbContainer);
+            });
+            thumbnails.style.display = 'block'; // Ensure thumbnails container is visible
+        } else {
+            thumbnails.style.display = 'none';
+        }
     }
 
     function showFullImage(imageUrl, description, aspectRatio, prompt) {
-        // Create the full image overlay
         const fullImageContainer = document.createElement('div');
         fullImageContainer.className = 'full-image-overlay';
-        
-        // Create the image container with the gradient background
+
         const imageContainer = document.createElement('div');
         imageContainer.className = 'full-image-container';
-        
-        // Create the prompt and description elements
-        const promptElement = document.createElement('p');
-        promptElement.className = 'full-image-prompt';
-        promptElement.textContent = `Prompt: ${prompt}`;
-        
-        const descriptionElement = document.createElement('p');
-        descriptionElement.className = 'full-image-description';
-        descriptionElement.textContent = `Description: ${description}`;
-        
-        const aspectRatioElement = document.createElement('p');
-        aspectRatioElement.className = 'full-image-aspect-ratio';
-        aspectRatioElement.textContent = `Aspect Ratio: ${aspectRatio}`;
-        
-        // Create the buttons for toggling visibility
-        const promptButton = document.createElement('button');
-        promptButton.className = 'toggle-button';
-        promptButton.textContent = 'Show Prompt';
-        promptButton.addEventListener('click', () => {
-            promptElement.classList.toggle('visible');
-            promptButton.textContent = promptElement.classList.contains('visible') ? 'Hide Prompt' : 'Show Prompt';
-        });
-        
-        const descriptionButton = document.createElement('button');
-        descriptionButton.className = 'toggle-button';
-        descriptionButton.textContent = 'Show Description';
-        descriptionButton.addEventListener('click', () => {
-            descriptionElement.classList.toggle('visible');
-            descriptionButton.textContent = descriptionElement.classList.contains('visible') ? 'Hide Description' : 'Show Description';
-        });
-    
-        const aspectRatioButton = document.createElement('button');
-        aspectRatioButton.className = 'toggle-button';
-        aspectRatioButton.textContent = 'Show Aspect Ratio';
-        aspectRatioButton.addEventListener('click', () => {
-            aspectRatioElement.classList.toggle('visible');
-            aspectRatioButton.textContent = aspectRatioElement.classList.contains('visible') ? 'Hide Aspect Ratio' : 'Show Aspect Ratio';
-        });
-        
-        // Create the download button
+
+        const closeButton = document.createElement('div');
+        closeButton.className = 'close-button';
+        closeButton.textContent = '×';
+        imageContainer.appendChild(closeButton);
+
+        const promptElement = createTextElement('full-image-prompt', `Prompt: ${prompt}`);
+        const descriptionElement = createTextElement('full-image-description', `Description: ${description}`);
+        const aspectRatioElement = createTextElement('full-image-aspect-ratio', `Aspect Ratio: ${aspectRatio}`);
+
+        const textInfoContainer = document.createElement('div');
+        textInfoContainer.className = 'text-info-container';
+        textInfoContainer.append(promptElement, descriptionElement, aspectRatioElement);
+
+        const buttons = [
+            createToggleButton(promptElement, 'Show Prompt'),
+            createToggleButton(descriptionElement, 'Show Description'),
+            createToggleButton(aspectRatioElement, 'Show Aspect Ratio')
+        ];
+
         const downloadButton = document.createElement('button');
         downloadButton.className = 'download-button';
         downloadButton.textContent = 'Download Image';
         downloadButton.addEventListener('click', () => {
             const link = document.createElement('a');
-            link.href = imageUrl.replace(/original_/i, '');;
-            link.download = `image_${Date.now()}.png`; // Optionally, you can format the filename
+            link.href = imageUrl.replace(/original_/i, '');
+            link.download = `image_${Date.now()}.png`;
             link.click();
         });
-        
-        // Create the full image element
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'text-container';
+        textContainer.append(...buttons, downloadButton, textInfoContainer);
+
         const fullImage = document.createElement('img');
         fullImage.src = imageUrl;
         fullImage.alt = 'Full Image';
         fullImage.className = 'full-image-img';
-        
-        // Create a container for the text and buttons
-        const textContainer = document.createElement('div');
-        textContainer.className = 'text-container';
-        
-        // Append buttons and text to the text container
-        textContainer.appendChild(promptButton);
-        textContainer.appendChild(descriptionButton);
-        textContainer.appendChild(aspectRatioButton);
-        textContainer.appendChild(downloadButton); // Add download button here
-        textContainer.appendChild(promptElement);
-        textContainer.appendChild(descriptionElement);
-        textContainer.appendChild(aspectRatioElement);
-        
-        // Append elements to the image container
-        imageContainer.appendChild(fullImage);
-        imageContainer.appendChild(textContainer);
-        
-        // Append the image container to the overlay
+
+        imageContainer.append(fullImage, textContainer);
         fullImageContainer.appendChild(imageContainer);
-        
-        // Add an event listener to remove the overlay on click
-        fullImageContainer.addEventListener('click', (event) => {
-            if (event.target === fullImageContainer) {
-                document.body.removeChild(fullImageContainer);
+        document.body.appendChild(fullImageContainer);
+
+        fullImageContainer.addEventListener('click', (e) => {
+            if (e.target === fullImageContainer || e.target === closeButton) {
+                fullImageContainer.remove();
             }
         });
-        
-        // Append the overlay to the body
-        document.body.appendChild(fullImageContainer);
+    }
+
+    function createTextElement(className, textContent) {
+        const element = document.createElement('p');
+        element.className = `${className} hidden`;
+        element.textContent = textContent;
+        return element;
+    }
+
+    function createToggleButton(targetElement, initialText) {
+        const button = document.createElement('button');
+        button.className = 'toggle-button';
+        button.textContent = initialText;
+        button.addEventListener('click', () => {
+            const isHidden = targetElement.classList.toggle('hidden');
+            button.textContent = isHidden ? `Show ${initialText.split(' ')[1]}` : `Hide ${initialText.split(' ')[1]}`;
+        });
+        return button;
     }
 });

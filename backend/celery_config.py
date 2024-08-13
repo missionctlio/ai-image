@@ -13,9 +13,11 @@ celery = Celery(
 @celery.task(name='backend.celery_config.generate_image_task')
 def generate_image_task(prompt: str, aspect_ratio: str):
     from backend.diffusion import generate_image
+    from backend.prompt_refiner import generate_description
     try:
         image_id = generate_image(prompt, aspect_ratio)
+        description = generate_description(prompt)
         image_url = f"/images/original_{image_id}.png"
-        return {'image_url': image_url, 'description': "N/A"}
+        return {'image_url': image_url, 'description': description}
     except Exception as e:
         raise e

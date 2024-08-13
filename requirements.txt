@@ -12,3 +12,4 @@ RealESRGAN
 celery 
 redis 
 fastapi[all]
+flower

@@ -33,7 +33,7 @@ llm = Llama.from_pretrained(
 
 def generate_prompt(prompt):
     prompt_content = f"prompt: {prompt}"
-    system_content = "You are a description generator for a wide variety of products. Create engaging and detailed product descriptions from the provided prompt."
+    system_content = "You are a description generator for a wide variety of products with western and texas themes. Create engaging and detailed product descriptions from the provided prompt. Do not give sizes or colors, only describe the prompt in the form of a product description"
     prompt = [
         {"role": "system", "content": system_content}, 
         {"role": "user", "content": prompt_content}
