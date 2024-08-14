@@ -265,9 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
         fullImageContainer.remove(); // Close the overlay
     });
 
-    let combinedPrompt = `<br /><strong>Original Prompt</strong><br /> <br />${prompt}`;
+    let combinedPrompt = `<br /><strong>Original Prompt</strong><hr>${prompt}`;
     if (refinedPrompt !== prompt && refinedPrompt.trim() !== '') {
-        combinedPrompt += `<br /><br /><br /><strong>Refined Prompt:</strong> ${refinedPrompt}`;
+        combinedPrompt += `<br /><br /><strong>Refined Prompt</strong><hr> ${refinedPrompt}`;
     }
 
     const promptElement = createTextElement('full-image-prompt', combinedPrompt);

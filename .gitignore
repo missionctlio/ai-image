@@ -1,6 +1,6 @@
 .venv
 __pycache__
-*.png
+frontend/images/*.png
 weights
 testing.py
 .env
