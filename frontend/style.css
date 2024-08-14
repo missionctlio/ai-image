@@ -152,12 +152,20 @@ button:hover {
     padding: 10px;
     box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
     width: 100%;
-    max-width: 15vh; /* Max width for the thumbnail section */
+    max-width: 20vh; /* Max width for the thumbnail section */
     height: 100vh; /* Full viewport height */
-    overflow-y: auto; /* Enable vertical scrolling if needed */
+    overflow-y: scroll; /* Enable vertical scrolling if needed */
+    overflow-x: hidden; /* Hide horizontal scrollbar */
     box-sizing: border-box; /* Include padding in width calculations */
+
+    /* Hide scrollbar for WebKit browsers (Chrome, Safari) */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer and Edge */
 }
 
+.thumbnails::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and Opera */
+}
 .thumbnail-container {
     position: relative; /* Contain the delete icon */
     display: inline-block; /* Ensure the thumbnail container fits the content */
@@ -175,13 +183,13 @@ button:hover {
 }
 
 .thumbnail:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .delete-icon {
     position: absolute; /* Absolute positioning within the relative container */
-    top: 0px; /* Distance from the top of the container */
-    right: 0px; /* Distance from the right of the container */
+    top: -5px; /* Distance from the top of the container */
+    right: -10px; /* Distance from the right of the container */
     width: 30px;
     height: 30px;
     background: rgba(0, 0, 0, 0.6); /* Semi-transparent dark background */
@@ -210,10 +218,19 @@ button:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow-y: auto; /* Enable vertical scrolling */
-    /* Optional: To hide horizontal scrolling */
-    overflow-x: hidden; 
+    overflow-y: scroll; /* Enable vertical scrolling */
+    overflow-x: scroll; /* Hide horizontal scrolling */
+    box-sizing: border-box; /* Include padding in width calculations */
+    
+    /* Hide scrollbar for WebKit browsers (Chrome, Safari) */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer and Edge */
 }
+
+.full-image-overlay::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and Opera */
+}
+
 
 .full-image-container {
     position: relative;
@@ -222,11 +239,18 @@ button:hover {
     border-radius: 8px;
     max-width: 90vh; /* Ensure container doesn't exceed viewport width */
     z-index: 1000;
-    overflow-y: auto; /* Enable vertical scrolling */
-    /* Optional: To hide horizontal scrolling */
-    overflow-x: hidden; 
+    overflow-y: scroll; /* Enable vertical scrolling */
+    overflow-x: scroll; /* Hide horizontal scrolling */
+    box-sizing: border-box; /* Include padding in width calculations */
+    
+    /* Hide scrollbar for WebKit browsers (Chrome, Safari) */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer and Edge */
 }
 
+::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and Opera */
+}
 .close-button {
     position: absolute; /* Absolute positioning within the relative container */
     top: 10px; /* Distance from the top of the container */
@@ -258,7 +282,7 @@ button:hover {
 }
 
 .text-info-container {
-    max-width: 63vh; /* Ensure it doesn't exceed the width of its parent */
+    max-width: 50vh; /* Ensure it doesn't exceed the width of its parent */
     overflow-wrap: break-word; /* Handle long words or URLs */
 }
 
@@ -432,6 +456,7 @@ button:hover {
 
 #clearThumbnails {
     margin-top: 10px;
+    margin-bottom:10px;
     padding: 0.5em 1em; /* Adjust padding using relative units */
     background-color: #f44336; /* Red background color */
     color: white; /* White text color */
@@ -467,4 +492,18 @@ button:hover {
 
 #clearThumbnails:focus {
     outline: none;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin-left: 10px; /* Adjust spacing as needed */
+}
+
+.checkbox-container input[type="checkbox"] {
+    margin-right: 5px; /* Spacing between checkbox and label */
+}
+
+.checkbox-container label {
+    font-size: 14px; /* Adjust font size as needed */
 }

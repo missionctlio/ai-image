@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const prompt = document.getElementById("prompt").value;
         const aspectRatio = document.getElementById("aspectRatio").value;
         const apiKey = 'your-api-key-here'; // Replace with actual API key
+        const usePromptRefiner = document.getElementById("usePromptRefiner").checked;
 
         try {
             const response = await fetch("/generate-image", {
@@ -18,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${apiKey}`
                 },
-                body: JSON.stringify({ prompt, aspectRatio })
+                body: JSON.stringify({ prompt, aspectRatio, usePromptRefiner })
             });
 
             if (response.ok) {

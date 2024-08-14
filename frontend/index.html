@@ -14,9 +14,14 @@
             <div class="input-container">
                 <textarea id="prompt" name="prompt" required placeholder="What would you like to see?"></textarea>
                 <select id="aspectRatio" name="aspectRatio" class="dropdown-button">
-                    <option value="1:1">1:1</option>
+                    <option value="4:5">4:5</option>
+                    <option value="5:4">5:4</option>
+                    <option value="3:2">3:2</option>
+                    <option value="16:10">16:10</option>
+                    <option value="1:1" selected>1:1</option>
                     <option value="4:3">4:3</option>
                     <option value="16:9">16:9</option>
+                    <option value="21:9">21:9</option>
                     <option value="32:9">32:9</option>
                     <!-- Add more options as needed -->
                 </select>
@@ -28,14 +33,19 @@
                         <div class="dot"></div>
                     </div>
                 </button>
+                <!-- Checkbox for using the prompt refiner -->
+                <div class="checkbox-container">
+                    <input type="checkbox" id="usePromptRefiner" name="usePromptRefiner" checked>
+                    <label for="usePromptRefiner">Use Prompt Refiner</label>
+                </div>
             </div>
         </form>
         
         <div id="thumbnails-container">
-        <div id="thumbnails" class="thumbnails">
-            <!-- Thumbnails of previous images will appear here -->
+            <div id="thumbnails" class="thumbnails">
+                <!-- Thumbnails of previous images will appear here -->
+            </div>
         </div>
-    </div>
     </div>
 </body>
 <script src="/static/app.js"></script>

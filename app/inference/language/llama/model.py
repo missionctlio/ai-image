@@ -10,6 +10,15 @@ MODEL_NAME = "QuantFactory/Meta-Llama-3-8B-instruct-GGUF"
 MODEL_FILENAME = "Meta-Llama-3-8B-Instruct.Q8_0.gguf"
 
 def load_llama_model() -> Llama:
+    """
+    Loads and initializes a pre-trained LLaMA model with the specified configuration.
+
+    This function loads the LLaMA model from a pre-defined repository and file. It configures various model parameters 
+    such as the number of GPU layers, context size, and prediction settings. The model is prepared for use in generating 
+    responses based on the specified configuration options.
+
+    :return: An instance of the `Llama` class, representing the loaded and configured model.
+    """
     logger.info(f"Loading LLaMA model '{MODEL_NAME}' from file '{MODEL_FILENAME}'...")
     llm = Llama.from_pretrained(
         repo_id=MODEL_NAME,
@@ -31,6 +40,3 @@ def load_llama_model() -> Llama:
     )
     logger.info("LLaMA model loaded successfully.")
     return llm
-
-def pipe() -> Llama:
-    return load_llama_model()

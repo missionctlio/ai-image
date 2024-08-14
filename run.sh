@@ -1,4 +1,6 @@
 #!/bin/bash
+# kill any running processes
+ps xau |grep venv |awk '{print $2 }'|xargs kill -9
 
 # Check if the virtual environment exists
 if [ ! -d ".venv" ]; then
