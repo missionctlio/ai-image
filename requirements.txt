@@ -13,3 +13,5 @@ celery
 redis 
 fastapi[all]
 flower
+pytest
+httpx
