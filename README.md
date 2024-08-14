@@ -4,7 +4,7 @@
 
 This application allows users to generate images based on text prompts. It integrates with an image generation API, displays results with detailed descriptions, and provides functionality for managing generated images.
 
-![image](https://github.com/user-attachments/assets/24d34bab-297c-42fb-976f-8f64a3623ff7)
+![image](https://github.com/user-attachments/assets/20ef42c8-d70f-48ee-9c4b-7b60b5909511)
 
 
 ## Features
