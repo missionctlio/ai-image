@@ -7,8 +7,13 @@ This application allows users to generate and upscale images based on text promp
 ### Screenshots
 
 <div style="display: flex; justify-content: space-between; gap: 10px;">
-    <img src="https://github.com/user-attachments/assets/97efeddf-a8d0-429b-b396-65512a6d5641" alt="Image 1" style="width: 48%; height: auto; object-fit: cover;">
-    <img src="https://github.com/user-attachments/assets/6ac508c3-c949-4120-ae58-a4045a545061" alt="Image 2" style="width: 48%; height: auto; object-fit: cover;">
+<div style="display: flex; justify-content: space-between; gap: 10px;">
+    <img src="https://github.com/user-attachments/assets/064189f0-7030-429b-9d04-3243e4dfdd45" alt="Image 1" style="width: 48%; height: auto; object-fit: cover;">
+    <img src="https://github.com/user-attachments/assets/05b8197b-4291-49ac-a086-da7fa01af827" alt="Image 2" style="width: 48%; height: auto; object-fit: cover;">
+    <img src="https://github.com/user-attachments/assets/176476c9-c5ea-4a74-a082-bd8e8df84c6f" alt="Image 3" style="width: 48%; height: auto; object-fit: cover;">
+    <img src="https://github.com/user-attachments/assets/09519c44-bf62-4dac-a32f-f2c9869a13ca" alt="Image 4" style="width: 48%; height: auto; object-fit: cover;">
+</div>
+
 </div>
 
 ## Features
