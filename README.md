@@ -6,8 +6,8 @@ This application allows users to generate images based on text prompts. It integ
 
 ### Screenshots
 <p align="left">
-  <a href="https://github.com/user-attachments/assets/4b625bd8-9db7-4952-ba02-38961dd266689" target="_blank">
-    <img src="https://github.com/user-attachments/assets/4b625bd8-9db7-4952-ba02-38961dd266689" alt="Screenshot 1" width="15%" style="display: block; margin: 0 auto;"/>
+  <a href="https://github.com/user-attachments/assets/433f9ed0-99b6-4e9f-a9ef-d181644cc4e5" target="_blank">
+    <img src="https://github.com/user-attachments/assets/433f9ed0-99b6-4e9f-a9ef-d181644cc4e5" alt="Screenshot 1" width="15%" style="display: block; margin: 0 auto;"/>
   </a>
   <a href="https://github.com/user-attachments/assets/dfd918ba-0135-4bfd-859d-270340af6319" target="_blank">
     <img src="https://github.com/user-attachments/assets/dfd918ba-0135-4bfd-859d-270340af6319" alt="Screenshot 2" width="15%" style="display: block; margin: 0 auto;"/>
