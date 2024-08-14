@@ -5,14 +5,11 @@
 This application allows users to generate and upscale images based on text prompts. It integrates with an image generation API, provides theme switching functionality, and uses Real-ESRGAN for image upscaling. Users can view results with detailed descriptions and manage generated images.
 
 ### Screenshots
-
 <div style="display: flex; justify-content: space-between; gap: 10px;">
-    <img src="https://github.com/user-attachments/assets/064189f0-7030-429b-9d04-3243e4dfdd45" alt="Image 1" style="width: 48%; height: auto; object-fit: cover;">
-    <img src="https://github.com/user-attachments/assets/05b8197b-4291-49ac-a086-da7fa01af827" alt="Image 2" style="width: 48%; height: auto; object-fit: cover;">
-    <img src="https://github.com/user-attachments/assets/b90e674d-32fc-495d-9215-9857ca530b9e" alt="Image 3" style="width: 48%; height: auto; object-fit: cover;">
-    <img src="https://github.com/user-attachments/assets/09519c44-bf62-4dac-a32f-f2c9869a13ca" alt="Image 4" style="width: 48%; height: auto; object-fit: cover;">
-</div>
-
+    <img src="https://github.com/user-attachments/assets/805df43e-65a8-445b-a651-5ac8bae5e2f2" alt="Image 1" style="width: 48%; height: auto; object-fit: cover;">
+    <img src="https://github.com/user-attachments/assets/2060752b-55f5-4699-93b3-a8f692a17b3c" alt="Image 2" style="width: 48%; height: auto; object-fit: cover;">
+    <img src="https://github.com/user-attachments/assets/5dae94d3-3125-42af-a2ca-eed9126327a2" alt="Image 3" style="width: 48%; height: auto; object-fit: cover;">
+    <img src="https://github.com/user-attachments/assets/e4ab88d0-bedf-43a8-a928-9d99c1ad3dcf" alt="Image 4" style="width: 48%; height: auto; object-fit: cover;">
 </div>
 
 ## Features
