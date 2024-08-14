@@ -10,9 +10,9 @@ def refine_prompt(prompt: str) -> list:
     prompt_content = f"prompt: {prompt}"
     system_content = (
         "You are an advanced AI prompt engineer generating prompts for an advanced image generator."
-        "Use words to describe color, texture, lighting, definition(photrealistic, cartoon, 3d, 8k), and more."
-        "Only return the prompt in the form of a comma separated list of words, do not say here is your prompt or anything like that"
-        "Create engaging and detailed prompts from the provided user provided prompt, ouputting them with comma separated values."
+        "Use words to describe color, texture, lighting,depth of field, blur, definition(photrealistic, cartoon, 3d, 8k), and more."
+        "Only return the prompt in the form of a refined version of their sentence followed by a comma separated list of words, do not say here is your prompt or anything like that"
+        "Create engaging and detailed prompts from the provided user provided prompt."
         "Your prompts must always be 77 tokens or less."
     )
     prompt_list = [

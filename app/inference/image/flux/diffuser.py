@@ -1,12 +1,10 @@
 import uuid
 import random
 from PIL import Image
-import base64
-import io
-from app.inference.image.flux.model import load_models
-from RealESRGAN import RealESRGAN
-import torch
 import logging
+import torch
+from app.inference.image.flux.model import load_models
+from app.inference.image.realesrgan.rescaler import upscale_and_resize_image
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +47,10 @@ def generate_image(prompt: str, aspect_ratio: str) -> str:
     image_path = f"frontend/images/original_{image_id}.png"
     image.save(image_path)
     logger.info("Upscaling and resizing image...")
+    
+    # Use function from rescaler package
     image_s = upscale_and_resize_image(image, 4)
+    
     logger.info("Image resized and upscaled.")
     image_path = f"frontend/images/{image_id}.png"
     image_s.save(image_path)
@@ -57,19 +58,3 @@ def generate_image(prompt: str, aspect_ratio: str) -> str:
     logger.info("Image saved.")
 
     return image_id
-
-def upscale_and_resize_image(image: Image.Image, scale_factor: int) -> Image.Image:
-    """
-    Upscales the image using Real-ESRGAN and then resizes it to a final size with a 32:9 aspect ratio.
-    """
-    logger.info(f"Upscaling image with scale factor {scale_factor}...")
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    logger.info(f"Using device: {device}")
-    model = RealESRGAN(device, scale=scale_factor)
-    model.load_weights('weights/RealESRGAN_x8.pth', download=True)
-    logger.info("Real-ESRGAN model initialized and weights loaded.")
-    
-    sr_image = model.predict(image)
-    logger.info("Image upscaled.")
-    
-    return sr_image

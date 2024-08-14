@@ -13,7 +13,7 @@ BFL_REPO = "black-forest-labs/FLUX.1-dev"
 Dtype = torch.bfloat16
 TRANSFORMER_URL = "https://huggingface.co/Kijai/flux-fp8/blob/main/flux1-dev-fp8.safetensors"
 
-def load_models():
+def load_models() -> FluxPipeline:
     logger.info(f"Loading FluxTransformer2DModel from URL with dtype {Dtype}...")
     transformer = FluxTransformer2DModel.from_single_file(TRANSFORMER_URL, torch_dtype=Dtype).to("cuda")
     quantize(transformer, weights=qfloat8)
