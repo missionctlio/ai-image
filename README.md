@@ -7,16 +7,16 @@ This application allows users to generate images based on text prompts. It integ
 ### Screenshots
 <p align="left">
   <a href="https://github.com/user-attachments/assets/4b625bd8-9db7-4952-ba02-38961dd266689" target="_blank">
-    <img src="https://github.com/user-attachments/assets/4b625bd8-9db7-4952-ba02-38961dd266689"" alt="Screenshot 1" width="15%" style="display: block; margin: 0 auto;"/>
+    <img src="https://github.com/user-attachments/assets/4b625bd8-9db7-4952-ba02-38961dd266689" alt="Screenshot 1" width="15%" style="display: block; margin: 0 auto;"/>
   </a>
   <a href="https://github.com/user-attachments/assets/dfd918ba-0135-4bfd-859d-270340af6319" target="_blank">
-    <img src="https://github.com/user-attachments/assets/dfd918ba-0135-4bfd-859d-270340af6319" alt="Screenshot 1" width="15%" style="display: block; margin: 0 auto;"/>
+    <img src="https://github.com/user-attachments/assets/dfd918ba-0135-4bfd-859d-270340af6319" alt="Screenshot 2" width="15%" style="display: block; margin: 0 auto;"/>
   </a>
     <a href="https://github.com/user-attachments/assets/daf9ce66-1f84-4f47-a675-fcc95ccccd54" target="_blank">
-    <img src="https://github.com/user-attachments/assets/daf9ce66-1f84-4f47-a675-fcc95ccccd54" alt="Screenshot 1" width="15%" style="display: block; margin: 0 auto;"/>
+    <img src="https://github.com/user-attachments/assets/daf9ce66-1f84-4f47-a675-fcc95ccccd54" alt="Screenshot 3" width="15%" style="display: block; margin: 0 auto;"/>
   </a>
    <a href="https://github.com/user-attachments/assets/1b740bf2-2c82-4d60-a843-438d73398ff5" target="_blank">
-    <img src="https://github.com/user-attachments/assets/1b740bf2-2c82-4d60-a843-438d73398ff5" alt="Screenshot" width="15%" style="display: block; margin: 0 auto;"/>
+    <img src="https://github.com/user-attachments/assets/1b740bf2-2c82-4d60-a843-438d73398ff5" alt="Screenshot 4" width="15%" style="display: block; margin: 0 auto;"/>
   </a>
 </p>
 
