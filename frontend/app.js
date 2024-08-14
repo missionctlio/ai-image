@@ -204,8 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
         closeButton.className = 'close-button';
         closeButton.textContent = '×';
         imageContainer.appendChild(closeButton);
-
-        const combinedPrompt = `Prompt: ${prompt}<br /><br /><br />Refined Prompt: ${refinedPrompt}`;
+        let combinedPrompt = `Prompt: ${prompt}`;
+        if (refinedPrompt !== prompt && refinedPrompt.trim() !== '') {
+            combinedPrompt += `<br /><br /><br />Refined Prompt: ${refinedPrompt}`;
+        };
         const promptElement = createTextElement('full-image-prompt', combinedPrompt);
         const descriptionElement = createTextElement('full-image-description', `Description: ${description}`);
         const aspectRatioElement = createTextElement('full-image-aspect-ratio', `Aspect Ratio: ${aspectRatio}`);

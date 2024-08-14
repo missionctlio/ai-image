@@ -34,7 +34,7 @@ def generate_image_task(prompt: str, aspect_ratio: str, usePromptRefiner: bool):
         # Generate the image based on the refined or original prompt and aspect ratio
         image_id = generate_image(refined_prompt_text, aspect_ratio)
         # Generate the description if prompt was refined
-        description = generate_description(refined_prompt_text) if usePromptRefiner else "N/A"
+        description = generate_description(refined_prompt_text)
         # Construct the image URL
         image_url = f"/images/original_{image_id}.png"
         
