@@ -1,7 +1,27 @@
 document.addEventListener('DOMContentLoaded', () => {
     const promptForm = document.getElementById("promptForm");
-    const thumbnails = document.getElementById("thumbnails");
+    
+    function applyTheme(theme) {
+        if (theme === 'dark') {
+            $('body').removeClass('light-theme').addClass('dark-theme');
+            $('.theme-selector').removeClass('light-theme').addClass('dark-theme');
+        } else {
+            $('body').removeClass('dark-theme').addClass('light-theme');
+            $('.theme-selector').removeClass('dark-theme').addClass('light-theme');
+        }
+    }
 
+    // Load theme from local storage
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+    $('#themeSelector').val(savedTheme);
+
+    // Change theme when the dropdown value changes
+    $('#themeSelector').change(function() {
+        const selectedTheme = $(this).val();
+        applyTheme(selectedTheme);
+        localStorage.setItem('theme', selectedTheme);
+    });
     // Load images from local storage on page load
     loadThumbnails();
 
@@ -158,80 +178,106 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
     function loadThumbnails() {
+        // Get the images from local storage
         const images = JSON.parse(localStorage.getItem("images")) || [];
-        thumbnails.innerHTML = '<button id="clearThumbnails" class="clear-images-button">Clear Images</button>';
-
+        
+        // Get the thumbnails container and clear existing thumbnails
+        const thumbnailsContainer = document.getElementById('thumbnails-container');
+        const thumbnails = document.getElementById('thumbnails');
+        thumbnails.innerHTML = '';
+    
+        // Show or hide the "Clear Images" button
+        const clearButton = document.getElementById('clearThumbnails');
         if (images.length > 0) {
-            images.forEach((img, index) => {
-                const thumbContainer = document.createElement('div');
-                thumbContainer.className = 'thumbnail-container';
-
-                const thumb = document.createElement('img');
-                thumb.src = img.imageUrl;
-                thumb.alt = "Thumbnail";
-                thumb.className = 'thumbnail';
-                thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.description, img.refinedPrompt, img.aspectRatio, img.prompt));
-
-                const descriptionContainer = document.createElement('div');
-                descriptionContainer.className = 'description-container';
-                descriptionContainer.textContent = `Aspect Ratio: ${img.aspectRatio}`;
-
-                const deleteIcon = document.createElement('div');
-                deleteIcon.className = 'delete-icon';
-                deleteIcon.textContent = '×';
-                deleteIcon.dataset.index = index;
-                deleteIcon.addEventListener('click', () => deleteImage(index));
-
-                thumbContainer.append(thumb, descriptionContainer, deleteIcon);
-                thumbnails.appendChild(thumbContainer);
-            });
-            thumbnails.style.display = 'block'; // Ensure thumbnails container is visible
+            // Show button if there are images
+            if (!clearButton) {
+                const newClearButton = document.createElement('button');
+                newClearButton.id = 'clearThumbnails';
+                newClearButton.className = 'clear-images-button';
+                newClearButton.textContent = 'Clear Images';
+                newClearButton.addEventListener('click', () => {
+                    // Clear images from local storage and refresh thumbnails
+                    localStorage.removeItem('images');
+                    loadThumbnails(); // Refresh thumbnails
+                });
+                thumbnailsContainer.prepend(newClearButton);
+            } else {
+                clearButton.style.display = 'block';
+            }
         } else {
-            thumbnails.style.display = 'none';
+            // Hide button if no images
+            if (clearButton) {
+                clearButton.style.display = 'none';
+            }
         }
+    
+        // Add new thumbnails
+        images.forEach((img, index) => {
+            const thumbContainer = document.createElement('div');
+            thumbContainer.className = 'thumbnail-container';
+    
+            const thumb = document.createElement('img');
+            thumb.src = img.imageUrl;
+            thumb.alt = "Thumbnail";
+            thumb.className = 'thumbnail';
+            thumb.addEventListener('click', () => showFullImage(img.imageUrl, img.description, img.refinedPrompt, img.aspectRatio, img.prompt));
+    
+            const descriptionContainer = document.createElement('div');
+            descriptionContainer.className = 'description-container';
+            descriptionContainer.textContent = `Aspect Ratio: ${img.aspectRatio}`;
+    
+            const deleteIcon = document.createElement('div');
+            deleteIcon.className = 'delete-icon';
+            deleteIcon.textContent = '×';
+            deleteIcon.dataset.index = index;
+            deleteIcon.addEventListener('click', () => deleteImage(index));
+    
+            thumbContainer.append(thumb, descriptionContainer, deleteIcon);
+            thumbnails.appendChild(thumbContainer);
+        });
+    
+        thumbnails.style.display = 'grid'; // Ensure thumbnails container is visible
     }
+    
+    
+    
 
     function showFullImage(imageUrl, description, refinedPrompt, aspectRatio, prompt) {
         const fullImageContainer = document.createElement('div');
         fullImageContainer.className = 'full-image-overlay';
-
+    
         const imageContainer = document.createElement('div');
-        imageContainer.className = 'full-image-container';
-
+        imageContainer.className = 'full-image-container theme-selector';
+    
         const closeButton = document.createElement('div');
         closeButton.className = 'close-button';
         closeButton.textContent = '×';
         imageContainer.appendChild(closeButton);
-        let combinedPrompt = `Prompt: ${prompt}`;
+    
+        let combinedPrompt = `<strong>Original Prompt:</strong> ${prompt}`;
         if (refinedPrompt !== prompt && refinedPrompt.trim() !== '') {
-            combinedPrompt += `<br /><br /><br />Refined Prompt: ${refinedPrompt}`;
-        };
+            combinedPrompt += `<br /><br /><br /><strong>Refined Prompt:</strong> ${refinedPrompt}`;
+        }
+    
         const promptElement = createTextElement('full-image-prompt', combinedPrompt);
-        const descriptionElement = createTextElement('full-image-description', `Description: ${description}`);
-        const aspectRatioElement = createTextElement('full-image-aspect-ratio', `Aspect Ratio: ${aspectRatio}`);
-
+        const descriptionElement = createTextElement('full-image-description', `<strong>Description:</strong> ${description}`);
+        const aspectRatioElement = createTextElement('full-image-aspect-ratio', `<strong>Aspect Ratio:</strong>${aspectRatio}`);
+    
         const textInfoContainer = document.createElement('div');
         textInfoContainer.className = 'text-info-container';
         textInfoContainer.append(promptElement, descriptionElement, aspectRatioElement);
-
+    
         const promptButton = document.createElement('button');
-        promptButton.className = 'toggle-button';
-        promptButton.textContent = 'Show Prompt Details';
+        promptButton.className = 'toggle-button theme-selector';
+        promptButton.textContent = 'Show Prompt';
         promptButton.addEventListener('click', () => {
             const isHidden = promptElement.classList.toggle('hidden');
-            promptButton.textContent = isHidden ? 'Show Prompt Details' : 'Hide Prompt Details';
+            promptButton.textContent = isHidden ? 'Show Prompt' : 'Hide Prompt Details';
         });
 
-        const buttons = [
-            promptButton,
-            createToggleButton(descriptionElement, 'Show Description'),
-            createToggleButton(aspectRatioElement, 'Show Aspect Ratio')
-        ];
-
         const downloadButton = document.createElement('button');
-        downloadButton.className = 'download-button';
+        downloadButton.className = 'download-button theme-selector';
         downloadButton.textContent = 'Download Image';
         downloadButton.addEventListener('click', () => {
             const link = document.createElement('a');
@@ -239,37 +285,50 @@ document.addEventListener('DOMContentLoaded', () => {
             link.download = `image_${Date.now()}.png`;
             link.click();
         });
+    
+        const descriptionButton = createToggleButton(descriptionElement, 'Show Description');
+        const aspectRatioButton = createToggleButton(aspectRatioElement, 'Show Aspect Ratio');
+    
+        const toggleContainer = document.createElement('div');
+        toggleContainer.className = 'toggle-container';
+        toggleContainer.append(promptButton, descriptionButton, aspectRatioButton, downloadButton);
+    
 
+    
         const textContainer = document.createElement('div');
         textContainer.className = 'text-container';
-        textContainer.append(...buttons, downloadButton, textInfoContainer);
-
+        textContainer.append(toggleContainer, textInfoContainer);
+    
         const fullImage = document.createElement('img');
         fullImage.src = imageUrl;
         fullImage.alt = 'Full Image';
         fullImage.className = 'full-image-img';
-
+    
         imageContainer.append(fullImage, textContainer);
         fullImageContainer.appendChild(imageContainer);
         document.body.appendChild(fullImageContainer);
-
+    
         fullImageContainer.addEventListener('click', (e) => {
             if (e.target === fullImageContainer || e.target === closeButton) {
                 fullImageContainer.remove();
             }
         });
+        let savedTheme = localStorage.getItem('theme') || 'light';
+        console.log(savedTheme);
+        applyTheme(savedTheme);
     }
+    
 
     function createTextElement(className, textContent) {
         const element = document.createElement('p');
-        element.className = `${className} hidden`;
+        element.className = `${className} theme-selector hidden`;
         element.innerHTML = textContent;
         return element;
     }
 
     function createToggleButton(targetElement, initialText) {
         const button = document.createElement('button');
-        button.className = 'toggle-button';
+        button.className = 'toggle-button theme-selector';
         button.textContent = initialText;
         button.addEventListener('click', () => {
             const isHidden = targetElement.classList.toggle('hidden');

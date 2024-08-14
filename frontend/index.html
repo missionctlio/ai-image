@@ -10,10 +10,16 @@
 <body>
 
     <div class="container">
+        <div class="theme-selector-container">
+            <select id="themeSelector" class="theme-selector">
+                <option value="light">Light Theme</option>
+                <option value="dark">Dark Theme</option>
+            </select>
+        </div>
         <h1>Generate Images</h1>
-        <form id="promptForm">
-            <div class="input-container">
-                <textarea id="prompt" name="prompt" required placeholder="What would you like to see?"></textarea>
+        <form id="promptForm" class="form-container">
+            <input type="text" id="prompt" name="prompt" required placeholder="What would you like to see?">
+            <div class="form-controls">
                 <select id="aspectRatio" name="aspectRatio" class="dropdown-button">
                     <option value="4:5">4:5</option>
                     <option value="5:4">5:4</option>
@@ -24,9 +30,12 @@
                     <option value="16:9">16:9</option>
                     <option value="21:9">21:9</option>
                     <option value="32:9">32:9</option>
-                    <!-- Add more options as needed -->
                 </select>
-                <button type="submit">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="usePromptRefiner" name="usePromptRefiner" checked>
+                    <label for="usePromptRefiner">Use Prompt Refiner</label>
+                </div>
+                <button class="theme-selector" type="submit">
                     <span class="button-text">Generate</span>
                     <div class="loading-dots" style="display: none;">
                         <div class="dot"></div>
@@ -34,20 +43,18 @@
                         <div class="dot"></div>
                     </div>
                 </button>
-                <!-- Checkbox for using the prompt refiner -->
-                <div class="checkbox-container">
-                    <input type="checkbox" id="usePromptRefiner" name="usePromptRefiner" checked>
-                    <label for="usePromptRefiner">Use Prompt Refiner</label>
-                </div>
             </div>
         </form>
-        
+        <div class="button-container">
+            <button id="clearThumbnails" class="theme-selector clear-button">Clear Images</button>
+        </div>
         <div id="thumbnails-container">
             <div id="thumbnails" class="thumbnails">
                 <!-- Thumbnails of previous images will appear here -->
             </div>
         </div>
     </div>
+
 </body>
 <script src="/static/app.js"></script>
 </html>
