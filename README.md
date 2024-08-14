@@ -2,23 +2,21 @@
 
 ## Overview
 
-This application allows users to generate images based on text prompts. It integrates with an image generation API, displays results with detailed descriptions, and provides functionality for managing generated images.
+This application allows users to generate and upscale images based on text prompts. It integrates with an image generation API, provides theme switching functionality, and uses Real-ESRGAN for image upscaling. Users can view results with detailed descriptions and manage generated images.
 
 ### Screenshots
+
 <div style="display: flex; justify-content: space-between; gap: 10px;">
     <img src="https://github.com/user-attachments/assets/97efeddf-a8d0-429b-b396-65512a6d5641" alt="Image 1" style="width: 48%; height: auto; object-fit: cover;">
     <img src="https://github.com/user-attachments/assets/6ac508c3-c949-4120-ae58-a4045a545061" alt="Image 2" style="width: 48%; height: auto; object-fit: cover;">
 </div>
 
-
-
-
-
-
 ## Features
 
 - **Image Generation**: Submit prompts to generate images via the `/generate-image` API endpoint.
+- **Image Upscaling**: Enhance image quality using Real-ESRGAN for upscaling.
 - **Prompt Handling**: Displays both the original and refined prompts combined with a line break.
+- **Theme Switcher**: Toggle between light and dark themes for a personalized user experience.
 - **Image Display**: View full-size images with associated details.
 - **Image Management**: Save generated images to local storage, view thumbnails, and delete images.
 - **Thumbnails**: Automatically load and display thumbnails of saved images.
@@ -42,7 +40,7 @@ This application allows users to generate images based on text prompts. It integ
 - **Inference**:
   - **Meta-Llama LLaMA3**: Used for language-based prompt refinement and description generation.
   - **Black-Forest-Labs Flux Diffuser**: Utilized for the image diffusion process.
-
+  - **Real-ESRGAN**: Enhances image quality through upscaling.
 
 - **Database**:
   - Local Storage (for saving images and metadata)
@@ -55,7 +53,7 @@ Generates an image based on the provided prompt and aspect ratio.
 
 **Request Body:**
 
-```
+```json
 {
     "prompt": "string",
     "aspectRatio": "string"
@@ -64,7 +62,7 @@ Generates an image based on the provided prompt and aspect ratio.
 
 **Response:**
 
-```
+```json
 {
     "task_id": "string"
 }
@@ -79,7 +77,7 @@ Checks the status of the image generation task.
 
 **Response:**
 
-```
+```json
 {
     "status": "string",
     "result": {
@@ -90,13 +88,33 @@ Checks the status of the image generation task.
 }
 ```
 
+### POST /upscale-image
+
+Upscales an image using Real-ESRGAN.
+
+**Request Body:**
+
+```json
+{
+    "image_url": "string"
+}
+```
+
+**Response:**
+
+```json
+{
+    "upscaled_image_url": "string"
+}
+```
+
 ### DELETE /delete-images/
 
 Deletes images from the server.
 
 **Request Body:**
 
-```
+```json
 {
     "image_ids": ["string"]
 }
@@ -104,7 +122,7 @@ Deletes images from the server.
 
 **Response:**
 
-```
+```json
 {
     "status": "string"
 }
@@ -118,14 +136,19 @@ The application is organized into several components, each serving a specific pu
   - `frontend/index.html`: Main HTML file for the user interface.
   - `frontend/style.css`: CSS styles for the application.
   - `frontend/app.js`: JavaScript handling UI interactions and API calls.
+  - `frontend/images/`: Directory for storing image assets.
 
 - **Backend**:
-  - `app/api.py`: FastAPI application entry point.
+  - `app/backend/api.py`: FastAPI application entry point.
 
 - **Inference**:
   - **Image**:
-    - `app/inference/image/diffuser.py`: Image diffusion logic using the Black-Forest-Labs Flux Diffuser.
-    - `app/inference/image/model.py`: Model-related logic.
+    - **Flux Diffuser**:
+      - `app/inference/image/flux/diffuser.py`: Image diffusion logic using the Black-Forest-Labs Flux Diffuser.
+      - `app/inference/image/flux/model.py`: Model-related logic for the Flux Diffuser.
+    - **Real-ESRGAN**:
+      - `app/inference/image/realesrgan/model.py`: Model-related logic for Real-ESRGAN.
+      - `app/inference/image/realesrgan/rescaler.py`: Image upscaling logic using Real-ESRGAN.
   - **Language**:
     - **Llama**:
       - `app/inference/language/llama/description.py`: Description generation using Meta-Llama LLaMA3.
@@ -138,9 +161,15 @@ The application is organized into several components, each serving a specific pu
 
 - **Docker**:
   - `docker-compose.yaml`: Defines the services for Docker Compose.
-  
-- **Startup** 
+
+- **Startup**:
   - `run.sh`: Script to build and run Docker containers.
+
+- **Main**:
+  - `main.py`: Entry point for running the FastAPI application.
+
+- **Dependencies**:
+  - `requirements.txt`: Lists the Python dependencies for the project.
 
 ## Setup and Installation
 
@@ -155,13 +184,13 @@ The application is organized into several components, each serving a specific pu
 1. **Clone the Repository**
 
    ```
-   git clone https://github.com/your-username/image-generation-app.git
+   git clone https://github.com/missionctrl/ai-image.git
    ```
 
 2. **Navigate to the Project Directory**
 
    ```
-   cd image-generation-app
+   cd ai-image
    ```
 
 3. **Set Up the Environment**
