@@ -21,16 +21,12 @@ def _get_aspect_ratio_dimensions(aspect_ratio: str) -> tuple:
     :return: A tuple containing the width and height for the specified aspect ratio.
     """
     aspect_ratios = {
-        "16:9": (960, 540),
-        "4:3": (1024, 768),
         "1:1": (1024, 1024),
-        "32:9": (1280, 360),
-        "21:9": (2560, 1080),
         "3:2": (1504, 1008),
-        "5:4": (1280, 1024),
-        "2:1": (1920, 960),
-        "16:10": (1280, 800),
-        "4:5": (800, 1008),
+        "4:3": (1024, 768),
+        "16:9": (960, 540),
+        "21:9": (2560, 1080),
+        "32:9": (1280, 360),
     }
     
     if aspect_ratio not in aspect_ratios:

@@ -244,79 +244,106 @@ document.addEventListener('DOMContentLoaded', () => {
     
 
     function showFullImage(imageUrl, description, refinedPrompt, aspectRatio, prompt) {
-        const fullImageContainer = document.createElement('div');
-        fullImageContainer.className = 'full-image-overlay';
-    
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'full-image-container theme-selector';
-    
-        const closeButton = document.createElement('div');
-        closeButton.className = 'close-button';
-        closeButton.textContent = '×';
-        imageContainer.appendChild(closeButton);
-    
-        let combinedPrompt = `<strong>Original Prompt:</strong> ${prompt}`;
-        if (refinedPrompt !== prompt && refinedPrompt.trim() !== '') {
-            combinedPrompt += `<br /><br /><br /><strong>Refined Prompt:</strong> ${refinedPrompt}`;
-        }
-    
-        const promptElement = createTextElement('full-image-prompt', combinedPrompt);
-        const descriptionElement = createTextElement('full-image-description', `<strong>Description:</strong> ${description}`);
-        const aspectRatioElement = createTextElement('full-image-aspect-ratio', `<strong>Aspect Ratio:</strong>${aspectRatio}`);
-    
-        const textInfoContainer = document.createElement('div');
-        textInfoContainer.className = 'text-info-container';
-        textInfoContainer.append(promptElement, descriptionElement, aspectRatioElement);
-    
-        const promptButton = document.createElement('button');
-        promptButton.className = 'toggle-button theme-selector';
-        promptButton.textContent = 'Show Prompt';
-        promptButton.addEventListener('click', () => {
-            const isHidden = promptElement.classList.toggle('hidden');
-            promptButton.textContent = isHidden ? 'Show Prompt' : 'Hide Prompt Details';
-        });
+    const fullImageContainer = document.createElement('div');
+    fullImageContainer.className = 'full-image-overlay';
 
-        const downloadButton = document.createElement('button');
-        downloadButton.className = 'download-button theme-selector';
-        downloadButton.textContent = 'Download Image';
-        downloadButton.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.href = imageUrl.replace(/original_/i, '');
-            link.download = `image_${Date.now()}.png`;
-            link.click();
-        });
-    
-        const descriptionButton = createToggleButton(descriptionElement, 'Show Description');
-        const aspectRatioButton = createToggleButton(aspectRatioElement, 'Show Aspect Ratio');
-    
-        const toggleContainer = document.createElement('div');
-        toggleContainer.className = 'toggle-container';
-        toggleContainer.append(promptButton, descriptionButton, aspectRatioButton, downloadButton);
-    
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'full-image-container theme-selector';
 
-    
-        const textContainer = document.createElement('div');
-        textContainer.className = 'text-container';
-        textContainer.append(toggleContainer, textInfoContainer);
-    
-        const fullImage = document.createElement('img');
-        fullImage.src = imageUrl;
-        fullImage.alt = 'Full Image';
-        fullImage.className = 'full-image-img';
-    
-        imageContainer.append(fullImage, textContainer);
-        fullImageContainer.appendChild(imageContainer);
-        document.body.appendChild(fullImageContainer);
-    
-        fullImageContainer.addEventListener('click', (e) => {
-            if (e.target === fullImageContainer || e.target === closeButton) {
-                fullImageContainer.remove();
-            }
-        });
-        let savedTheme = localStorage.getItem('theme') || 'light';
-        console.log(savedTheme);
-        applyTheme(savedTheme);
+    const closeButton = document.createElement('div');
+    closeButton.className = 'close-button';
+    closeButton.textContent = '×';
+    imageContainer.appendChild(closeButton);
+
+    const copyButton = document.createElement('button');
+    copyButton.className = 'copy-button theme-selector';
+    copyButton.innerHTML = '📋'; // You can use any copy icon or emoji here
+    copyButton.title = 'Copy Prompt';
+
+    copyButton.addEventListener('click', () => {
+        document.getElementById('prompt').value = prompt;
+        fullImageContainer.remove(); // Close the overlay
+    });
+
+    let combinedPrompt = `<br /><strong>Original Prompt</strong><br /> <br />${prompt}`;
+    if (refinedPrompt !== prompt && refinedPrompt.trim() !== '') {
+        combinedPrompt += `<br /><br /><br /><strong>Refined Prompt:</strong> ${refinedPrompt}`;
     }
+
+    const promptElement = createTextElement('full-image-prompt', combinedPrompt);
+    promptElement.prepend(copyButton)
+    const descriptionElement = createTextElement('full-image-description', `<strong>Description</strong><br /> <br />${description}`);
+    const aspectRatioElement = createTextElement('full-image-aspect-ratio', `<strong>Aspect Ratio</strong><br /> <br />${aspectRatio}`);
+
+    const textInfoContainer = document.createElement('div');
+    textInfoContainer.className = 'text-info-container';
+    textInfoContainer.append(promptElement, descriptionElement, aspectRatioElement);
+
+    const promptButton = document.createElement('button');
+    promptButton.className = 'toggle-button theme-selector';
+    promptButton.textContent = 'Show Prompt';
+    promptButton.addEventListener('click', () => {
+        const isHidden = promptElement.classList.toggle('hidden');
+        promptButton.textContent = isHidden ? 'Show Prompt' : 'Hide Prompt Details';
+    });
+
+    const downloadButton = document.createElement('button');
+    downloadButton.className = 'download-button theme-selector';
+    downloadButton.textContent = 'Download Image';
+    downloadButton.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.href = imageUrl.replace(/original_/i, '');
+        link.download = `image_${Date.now()}.png`;
+        link.click();
+    });
+
+    const descriptionButton = createToggleButton(descriptionElement, 'Show Description');
+    const aspectRatioButton = createToggleButton(aspectRatioElement, 'Show Aspect Ratio');
+
+    const toggleContainer = document.createElement('div');
+    toggleContainer.className = 'toggle-container';
+    toggleContainer.append(promptButton, descriptionButton, aspectRatioButton, downloadButton);
+
+    const textContainer = document.createElement('div');
+    textContainer.className = 'text-container';
+    textContainer.append(toggleContainer, textInfoContainer);
+
+    const fullImage = document.createElement('img');
+    fullImage.src = imageUrl;
+    fullImage.alt = 'Full Image';
+    fullImage.className = 'full-image-img';
+
+    imageContainer.append(fullImage, textContainer);
+    fullImageContainer.appendChild(imageContainer);
+    document.body.appendChild(fullImageContainer);
+
+    fullImageContainer.addEventListener('click', (e) => {
+        if (e.target === fullImageContainer || e.target === closeButton) {
+            fullImageContainer.remove();
+        }
+    });
+    let savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+}
+
+function createTextElement(className, textContent) {
+    const element = document.createElement('p');
+    element.className = `${className} theme-selector hidden`;
+    element.innerHTML = textContent;
+    return element;
+}
+
+function createToggleButton(targetElement, initialText) {
+    const button = document.createElement('button');
+    button.className = 'toggle-button theme-selector';
+    button.textContent = initialText;
+    button.addEventListener('click', () => {
+        const isHidden = targetElement.classList.toggle('hidden');
+        button.textContent = isHidden ? `Show ${initialText.split(' ')[1]}` : `Hide ${initialText.split(' ')[1]}`;
+    });
+    return button;
+}
+
     
 
     function createTextElement(className, textContent) {

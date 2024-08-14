@@ -14,7 +14,9 @@
 
 html, body {
     height: 100%;
+    width: 100%;
     margin: 0;
+    padding: 0;
 }
 
 
@@ -227,7 +229,7 @@ input[type="text"] {
 }
 
 .thumbnail-container:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 /* Delete icon styles */
@@ -328,18 +330,71 @@ input[type="text"] {
     background: rgba(0, 0, 0, 0.8);
 }
 
-.text-container {
-    display: flex; /* Use flexbox for horizontal alignment */
-    align-items: flex-start; /* Align items to the top */
-    width: 100%; /* Ensure it takes full width of its parent */
-    max-width: 50vh; /* Ensure it does not exceed parent width */
-    box-sizing: border-box; /* Include padding and border in width calculations */
-    overflow: hidden; /* Hide any overflow */
+.toggle-container {
+    display: flex;
+    align-items: center;
 }
 
-.toggle-container {
-    margin-right: 10px; /* Space between toggle buttons and text-info-container */
+.toggle-checkbox {
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
+
+.toggle-label {
+    cursor: pointer;
+    position: relative;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 6em; /* Width of the slider */
+    height: 3em; /* Height of the slider */
+    background-color: #eee; /* Slider background color */
+    border-radius: 1.5em;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-text {
+    color: white;
+    font-size: 1em;
+    position: absolute;
+    transition: opacity 0.3s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    height: 2.8em;
+    width: 2.8em;
+    border-radius: 50%;
+    background-color: white;
+    transition: transform 0.3s;
+    top: 50%;
+    left: 0.2em;
+    transform: translateY(-50%);
+}
+
+.toggle-checkbox:checked + .toggle-label .toggle-slider {
+    background-color: #333; /* Maintain slider background color */
+}
+
+.toggle-checkbox:checked + .toggle-label .toggle-slider::before {
+    transform: translateX(3em) translateY(-50%);
+}
+
+.toggle-checkbox:checked + .toggle-label .toggle-slider .toggle-text {
+    opacity: 1;
+}
+
+.toggle-checkbox:not(:checked) + .toggle-label .toggle-slider .toggle-text {
+    opacity: 0;
+}
+
+
 
 .text-info-container {
     flex: 1; /* Allow text-info-container to take available space */
@@ -480,7 +535,7 @@ input[type="text"] {
     }
 
     #thumbnails {
-        grid-template-columns: repeat(auto-fill, minmax(25%, 1fr)); /* Reduced size of grid items */
+        grid-template-columns: repeat(auto-fill, minmax(35%, 1fr)); /* Reduced size of grid items */
     }
 
 
@@ -571,4 +626,11 @@ input.dark-theme {
 input.dark-theme:focus {
     border-color: #666; /* Slightly lighter dark border on focus */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); /* Enhanced shadow on focus */
+}
+
+
+.copy-button {
+    position:relative;
+    top:-15px;
+    left:-15px;
 }
