@@ -347,43 +347,47 @@ input[type="text"] {
 
 .toggle-slider {
     position: relative;
-    width: 8em; /* Adjust width for text visibility */
-    height: 3em;
+    width: 80px; /* Adjust width for text visibility */
+    height: 20px;
     background-color: #eee; /* Slider background color */
     border-radius: 1.5em;
     transition: background-color 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-left:20px;
+    margin-left:10px;
 }
 
 .toggle-text {
-    color: #333; /* Text color */
-    font-size: 1em;
+    font-size: 0.7em;
     position: absolute;
     transition: opacity 0.3s;
     white-space: nowrap;
+    padding-right: 35px;
 }
-
+/* Slider knob */
 .toggle-slider::before {
     content: '';
     position: absolute;
-    height: 2.8em;
-    width: 2.8em;
+    height: 20px; /* Height of the knob */
+    width: 20px; /* Width of the knob */
     border-radius: 50%;
     background-color: white;
     transition: transform 0.3s;
+    right: 75px; /* Adjust this value if needed */
     top: 50%;
-    left: 0.1em;
-    transform: translateY(-50%);
+    transform: translateX(-5%) translateY(-50%); /* Adjusted for initial position */
 }
+
+/* Adjusted state when the checkbox is checked */
+.toggle-checkbox:checked + .toggle-label .toggle-slider::before {
+    transform: translateX(5em) translateY(-50%); /* Original position when checked */
+}
+
 
 .toggle-checkbox:checked + .toggle-label .toggle-slider {
-    background-color: #a79e9e; /* Maintain slider background color */
-}
-
-.toggle-checkbox:checked + .toggle-label .toggle-slider::before {
-    transform: translateX(5em) translateY(-50%); /* Adjusted for wider slider */
+    background-color: rgb(52, 114, 248); /* Maintain slider background color */
 }
 
 .toggle-checkbox:checked + .toggle-label .toggle-slider .toggle-text {
@@ -640,6 +644,11 @@ input.dark-theme:focus {
 }
 .copy-button {
     position:relative;
+    max-width: 5vh;
     top:-15px;
     left:-15px;
+}
+
+.text-info-container p {
+    font-size:0.7em;
 }

@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const promptForm = document.getElementById("promptForm");
-    
+    const baseUrl = 'http://aesync.servebeer.com:8888'; // Base URL for API endpoints
+
     function applyTheme(theme) {
         if (theme === 'dark') {
             $('body').removeClass('light-theme').addClass('dark-theme');
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         applyTheme(selectedTheme);
         localStorage.setItem('theme', selectedTheme);
     });
+
     // Load images from local storage on page load
     loadThumbnails();
 
@@ -33,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const usePromptRefiner = document.getElementById("usePromptRefiner").checked;
 
         try {
-            const response = await fetch("/generate-image", {
+            const response = await fetch(`${baseUrl}/generate-image`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -65,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const retryDelay = 5000; // 5 seconds
     
         try {
-            const statusResponse = await fetch(`/task-status/${taskId}`);
+            const statusResponse = await fetch(`${baseUrl}/task-status/${taskId}`);
     
             if (statusResponse.ok) {
                 const statusData = await statusResponse.json();
@@ -125,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalImageId = imageId.replace('original_', '');
 
             try {
-                const response = await fetch('/delete-images/', {
+                const response = await fetch(`${baseUrl}/delete-images/`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'
@@ -158,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             try {
-                const response = await fetch('/delete-images/', {
+                const response = await fetch(`${baseUrl}/delete-images/`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'
@@ -178,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
     function loadThumbnails() {
         // Get the images from local storage
         const images = JSON.parse(localStorage.getItem("images")) || [];
@@ -239,112 +242,89 @@ document.addEventListener('DOMContentLoaded', () => {
     
         thumbnails.style.display = 'grid'; // Ensure thumbnails container is visible
     }
-    
-    
-    
 
     function showFullImage(imageUrl, description, refinedPrompt, aspectRatio, prompt) {
-    const fullImageContainer = document.createElement('div');
-    fullImageContainer.className = 'full-image-overlay';
+        const fullImageContainer = document.createElement('div');
+        fullImageContainer.className = 'full-image-overlay';
 
-    const imageContainer = document.createElement('div');
-    imageContainer.className = 'full-image-container theme-selector';
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'full-image-container theme-selector';
 
-    const closeButton = document.createElement('div');
-    closeButton.className = 'close-button';
-    closeButton.textContent = '×';
-    imageContainer.appendChild(closeButton);
+        const closeButton = document.createElement('div');
+        closeButton.className = 'close-button';
+        closeButton.textContent = '×';
+        imageContainer.appendChild(closeButton);
 
-    const copyButton = document.createElement('button');
-    copyButton.className = 'copy-button theme-selector';
-    copyButton.innerHTML = '📋'; // You can use any copy icon or emoji here
-    copyButton.title = 'Copy Prompt';
+        const copyButton = document.createElement('button');
+        copyButton.className = 'copy-button theme-selector';
+        copyButton.innerHTML = '📋'; // You can use any copy icon or emoji here
+        copyButton.title = 'Copy Prompt';
 
-    copyButton.addEventListener('click', () => {
-        document.getElementById('prompt').value = prompt;
-        fullImageContainer.remove(); // Close the overlay
-    });
+        copyButton.addEventListener('click', () => {
+            document.getElementById('prompt').value = prompt;
+            fullImageContainer.remove(); // Close the overlay
+        });
 
-    let combinedPrompt = `<br /><strong>Original Prompt</strong><hr>${prompt}`;
-    if (refinedPrompt !== prompt && refinedPrompt.trim() !== '') {
-        combinedPrompt += `<br /><br /><strong>Refined Prompt</strong><hr> ${refinedPrompt}`;
-    }
-
-    const promptElement = createTextElement('full-image-prompt', combinedPrompt);
-    promptElement.prepend(copyButton)
-    const descriptionElement = createTextElement('full-image-description', `<strong>Description</strong><br /> <br />${description}`);
-    const aspectRatioElement = createTextElement('full-image-aspect-ratio', `<strong>Aspect Ratio</strong><br /> <br />${aspectRatio}`);
-
-    const textInfoContainer = document.createElement('div');
-    textInfoContainer.className = 'text-info-container';
-    textInfoContainer.append(promptElement, descriptionElement, aspectRatioElement);
-
-    const promptButton = document.createElement('button');
-    promptButton.className = 'toggle-button theme-selector';
-    promptButton.textContent = 'Show Prompt';
-    promptButton.addEventListener('click', () => {
-        const isHidden = promptElement.classList.toggle('hidden');
-        promptButton.textContent = isHidden ? 'Show Prompt' : 'Hide Prompt Details';
-    });
-
-    const downloadButton = document.createElement('button');
-    downloadButton.className = 'download-button theme-selector';
-    downloadButton.textContent = 'Download Image';
-    downloadButton.addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.href = imageUrl.replace(/original_/i, '');
-        link.download = `image_${Date.now()}.png`;
-        link.click();
-    });
-
-    const descriptionButton = createToggleButton(descriptionElement, 'Show Description');
-    const aspectRatioButton = createToggleButton(aspectRatioElement, 'Show Aspect Ratio');
-
-    const toggleContainer = document.createElement('div');
-    toggleContainer.className = 'toggle-container';
-    toggleContainer.append(promptButton, descriptionButton, aspectRatioButton, downloadButton);
-
-    const textContainer = document.createElement('div');
-    textContainer.className = 'text-container';
-    textContainer.append(toggleContainer, textInfoContainer);
-
-    const fullImage = document.createElement('img');
-    fullImage.src = imageUrl;
-    fullImage.alt = 'Full Image';
-    fullImage.className = 'full-image-img';
-
-    imageContainer.append(fullImage, textContainer);
-    fullImageContainer.appendChild(imageContainer);
-    document.body.appendChild(fullImageContainer);
-
-    fullImageContainer.addEventListener('click', (e) => {
-        if (e.target === fullImageContainer || e.target === closeButton) {
-            fullImageContainer.remove();
+        let combinedPrompt = `<br /><strong>Original Prompt</strong><hr>${prompt}`;
+        if (refinedPrompt !== prompt && refinedPrompt.trim() !== '') {
+            combinedPrompt += `<br /><br /><strong>Refined Prompt</strong><hr> ${refinedPrompt}`;
         }
-    });
-    let savedTheme = localStorage.getItem('theme') || 'light';
-    applyTheme(savedTheme);
-}
 
-function createTextElement(className, textContent) {
-    const element = document.createElement('p');
-    element.className = `${className} theme-selector hidden`;
-    element.innerHTML = textContent;
-    return element;
-}
+        const promptElement = createTextElement('full-image-prompt', combinedPrompt);
+        promptElement.prepend(copyButton);
+        const descriptionElement = createTextElement('full-image-description', `<strong>Description</strong><hr>${description}`);
+        const aspectRatioElement = createTextElement('full-image-aspect-ratio', `<strong>Aspect Ratio</strong><hr>${aspectRatio}`);
 
-function createToggleButton(targetElement, initialText) {
-    const button = document.createElement('button');
-    button.className = 'toggle-button theme-selector';
-    button.textContent = initialText;
-    button.addEventListener('click', () => {
-        const isHidden = targetElement.classList.toggle('hidden');
-        button.textContent = isHidden ? `Show ${initialText.split(' ')[1]}` : `Hide ${initialText.split(' ')[1]}`;
-    });
-    return button;
-}
+        const textInfoContainer = document.createElement('div');
+        textInfoContainer.className = 'text-info-container';
+        textInfoContainer.append(promptElement, descriptionElement, aspectRatioElement);
 
-    
+        const promptButton = document.createElement('button');
+        promptButton.className = 'toggle-button theme-selector';
+        promptButton.textContent = 'Show Prompt';
+        promptButton.addEventListener('click', () => {
+            const isHidden = promptElement.classList.toggle('hidden');
+            promptButton.textContent = isHidden ? 'Show Prompt' : 'Hide Prompt Details';
+        });
+
+        const downloadButton = document.createElement('button');
+        downloadButton.className = 'download-button theme-selector';
+        downloadButton.textContent = 'Download Image';
+        downloadButton.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = imageUrl.replace(/original_/i, '');
+            link.download = `image_${Date.now()}.png`;
+            link.click();
+        });
+
+        const descriptionButton = createToggleButton(descriptionElement, 'Show Description');
+        const aspectRatioButton = createToggleButton(aspectRatioElement, 'Show Aspect Ratio');
+
+        const toggleContainer = document.createElement('div');
+        toggleContainer.className = 'toggle-container';
+        toggleContainer.append(promptButton, descriptionButton, aspectRatioButton, downloadButton);
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'text-container';
+        textContainer.append(toggleContainer, textInfoContainer);
+
+        const fullImage = document.createElement('img');
+        fullImage.src = imageUrl;
+        fullImage.alt = 'Full Image';
+        fullImage.className = 'full-image-img';
+
+        imageContainer.append(fullImage, textContainer);
+        fullImageContainer.appendChild(imageContainer);
+        document.body.appendChild(fullImageContainer);
+
+        fullImageContainer.addEventListener('click', (e) => {
+            if (e.target === fullImageContainer || e.target === closeButton) {
+                fullImageContainer.remove();
+            }
+        });
+        let savedTheme = localStorage.getItem('theme') || 'light';
+        applyTheme(savedTheme);
+    }
 
     function createTextElement(className, textContent) {
         const element = document.createElement('p');
