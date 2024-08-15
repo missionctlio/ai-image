@@ -1,6 +1,7 @@
 from fastapi import FastAPI,HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
@@ -8,6 +9,13 @@ load_dotenv()
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://aesync.servebeer.com:8888", "http://localhost:8888"],  # Replace with the origin of your frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Set up logging configuration
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

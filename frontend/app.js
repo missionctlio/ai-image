@@ -76,8 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const { image_url: imageUrl, description, refined_prompt: refinedPrompt } = statusData.result;
                     document.querySelector('.loading-dots').style.display = 'none';
                     document.querySelector('.button-text').style.display = 'block';
-                    displayImage(imageUrl, description, refinedPrompt, aspectRatio, prompt);
-                    saveToLocalStorage(imageUrl, prompt, description, refinedPrompt, aspectRatio);
+                    displayImage(`${baseUrl}${imageUrl}`, description, refinedPrompt, aspectRatio, prompt);
+                    saveToLocalStorage(`${baseUrl}${imageUrl}`, prompt, description, refinedPrompt, aspectRatio);
                 } else if (statusData.status === 'PENDING') {
                     const nextRetryTime = Date.now() + retryDelay;
                     if (nextRetryTime - Date.now() <= maxPollDuration) {
