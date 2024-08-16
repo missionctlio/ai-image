@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const statusData = await statusResponse.json();
     
                 if (statusData.status === 'SUCCESS') {
-                    const { image_url: imageUrl, description, refined_prompt: refinedPrompt } = statusData.result;
+                    const { imageUrl: imageUrl, description, refinedPrompt: refinedPrompt } = statusData.result;
                     document.querySelector('.loading-dots').style.display = 'none';
                     document.querySelector('.button-text').style.display = 'block';
                     displayImage(`${baseUrl}${imageUrl}`, description, refinedPrompt, aspectRatio, prompt);

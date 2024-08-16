@@ -2,6 +2,7 @@ from main import app
 from fastapi import HTTPException, Header, Request, Query, APIRouter
 from pydantic import BaseModel
 import os
+import html
 import traceback
 import logging
 
@@ -155,3 +156,37 @@ async def get_task_status(task_id: str):
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+def _escape_html(text: str) -> str:
+    """Escape HTML characters in a given text.
+
+    Args:
+        text (str): The text to escape.
+
+    Returns:
+        str: The HTML-escaped text.
+    """
+    return html.escape(text) 
+class ChatRequest(BaseModel):
+    query: str
+
+@app.post("/chat")
+async def chat_request(request: ChatRequest) -> dict:
+    """
+    Handles the chat query and returns the response.
+
+    Args:
+        request (Request): The incoming request containing the query parameter.
+
+    Returns:
+        dict: A dictionary with the chat response.
+    """
+    try:
+        from app.inference.language.llama.chat import generate_chat
+        # Pass the query to the chat function
+        response = generate_chat(request.query)
+        return {"response": _escape_html(response)}
+
+    except Exception as e:
+        logger.error(f"Error: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")

@@ -55,7 +55,7 @@ def generate_image(prompt: str, aspect_ratio: str) -> str:
         height=initial_height,
         max_sequence_length=255,
         width=initial_width,
-        num_inference_steps=14,
+        num_inference_steps=6,
         generator=torch.Generator("cpu").manual_seed(random.randint(1, 123456))
     ).images[0]
 
