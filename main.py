@@ -4,6 +4,8 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+import torch
+torch.cuda.empty_cache()
 
 load_dotenv()
 
@@ -11,7 +13,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://aesync.servebeer.com:8888", "http://localhost:8888"],  # Replace with the origin of your frontend
+    allow_origins=["*"],  # Replace with the origin of your frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

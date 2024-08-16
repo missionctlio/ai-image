@@ -38,7 +38,7 @@ def generate_image_task(prompt: str, aspect_ratio: str, usePromptRefiner: bool):
         # Construct the image URL
         image_url = f"/images/original_{image_id}.png"
         
-        return {'image_url': image_url, 'refined_prompt': refined_prompt_text, 'description': description}
+        return {'imageUrl': image_url, 'refinedPrompt': refined_prompt_text, 'description': description}
     except Exception as e:
         # Log the error or handle it as needed
         logger.error(f"Error in generate_image_task: {e}")
