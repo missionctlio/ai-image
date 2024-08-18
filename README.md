@@ -200,6 +200,9 @@ The application is organized into several components, each serving a specific pu
 
    ```
    HUGGINGFACE_TOKEN=<your token>
+   GOOGLE_CLIENT_ID=<your-google-client-id>
+   GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+   SECRET_KEY=<your-secret-key>
    ```
 
 4. **Build and Run the Docker Containers**
