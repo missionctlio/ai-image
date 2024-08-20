@@ -1,6 +1,5 @@
 from app.workers.celery_config import celery
 import logging
-
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -27,7 +26,6 @@ def generate_image_task(prompt: str, aspect_ratio: str, usePromptRefiner: bool):
     from app.inference.language.llama.description import generate_description
     from app.inference.language.llama.refinement import refined_prompt
     from app.inference.image.flux.diffuser import generate_image
-    
     try:
         # Refine the prompt if usepromptrefiner is True
         refined_prompt_text = refined_prompt(prompt) if usePromptRefiner else prompt

@@ -1,4 +1,4 @@
-from app.inference.language.llama.model import load_llama_model
+from app.inference.language.llama.model import generate_response
 import logging
 
 # Set up logging configuration
@@ -31,9 +31,7 @@ def generate_chat(user_prompt: str) -> str:
     :return: A string containing the generated product chat.
     """
     prompt = _generate_chat_prompt(user_prompt)
-    answer = load_llama_model().create_chat_completion(
-        messages=prompt,
-    )
+    answer = generate_response(prompt)
     chat = answer['choices'][0]['message']['content']
     logger.info(f"Generated chat: {chat}")
     return chat

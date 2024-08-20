@@ -1,10 +1,9 @@
-from app.inference.language.llama.model import load_llama_model
+from app.inference.language.llama.model import generate_response
 import logging
 
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
 
 def _refine_prompt(prompt: str) -> list:
     """
@@ -44,9 +43,7 @@ def refined_prompt(user_prompt: str) -> str:
     :return: The refined prompt as a string, based on the model's response.
     """
     prompt = _refine_prompt(user_prompt)
-    answer = load_llama_model().create_chat_completion(
-        messages=prompt,
-    )
+    answer = generate_response(prompt)
     refined_prompt = answer['choices'][0]['message']['content']
     logger.info(f"Refined prompt: {refined_prompt}")
     return refined_prompt

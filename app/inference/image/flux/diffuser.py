@@ -1,17 +1,12 @@
 import uuid
-import random
 from PIL import Image
 import logging
-import torch
-from app.inference.image.flux.model import load_flux_model
+from app.inference.image.flux.model import generate_image as pipe
 from app.inference.image.realesrgan.rescaler import upscale_and_resize_image
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Initialize pipeline
-pipe = load_flux_model()
 
 def _get_aspect_ratio_dimensions(aspect_ratio: str) -> tuple:
     """
@@ -49,15 +44,7 @@ def generate_image(prompt: str, aspect_ratio: str) -> str:
     logger.info(f"Using dimensions: width={initial_width}, height={initial_height}")
 
     logger.info("Generating image...")
-    image = pipe(
-        prompt=prompt,
-        guidance_scale=100,
-        height=initial_height,
-        max_sequence_length=255,
-        width=initial_width,
-        num_inference_steps=6,
-        generator=torch.Generator("cpu").manual_seed(random.randint(1, 123456))
-    ).images[0]
+    image = pipe(prompt,initial_width,initial_height)
 
     image_id = str(uuid.uuid4())
     _save_image(image, image_id)  # Save the original image
