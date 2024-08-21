@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# clear cache
+sudo sh -c 'sync && echo 3 > /proc/sys/vm/drop_caches'  
+
 # kill any running processes
 ps xau |grep venv |awk '{print $2 }'|xargs kill -9
 
