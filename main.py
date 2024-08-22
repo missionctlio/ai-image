@@ -7,6 +7,8 @@ import os
 import torch
 from huggingface_hub import login
 import logging
+# Import the database session and models
+from app.db.config import get_db, Base, engine
 
 load_dotenv()
 
@@ -69,6 +71,10 @@ app.include_router(auth_router, prefix="/auth")
 # Include the API routes
 from app.backend.api.api import router as api_router
 app.include_router(api_router)
+
+
+# Create all tables (if they don't exist)
+Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 async def read_root():

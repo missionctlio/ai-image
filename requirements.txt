@@ -1,5 +1,7 @@
 fastapi
 uvicorn[standard]
+sse-starlette
+starlette
 websockets
 torch
 transformers
@@ -17,3 +19,7 @@ flower
 pytest
 httpx
 Authlib
+sqlalchemy 
+psycopg2-binary 
+alembic
+sqlalchemy-utils

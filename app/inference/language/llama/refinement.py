@@ -1,4 +1,4 @@
-from app.inference.language.llama.model import generate_response
+from app.inference.language.llama.model import generate_non_streaming_response
 import logging
 
 # Set up logging configuration
@@ -23,7 +23,7 @@ def _refine_prompt(prompt: str) -> list:
         "Use words to describe color, texture, lighting,depth of field, blur, definition(photrealistic, cartoon, 3d, 8k), and more."
         "Only return the prompt in the form of a refined version of their sentence followed by a comma separated list of words, do not say here is your prompt or anything like that"
         "Create engaging and detailed prompts from the provided user provided prompt."
-        "Your prompts must always be 77 tokens or less."
+        "Your prompts must always be 77 words or less."
     )
     prompt_list = [
         {"role": "system", "content": system_content}, 
@@ -32,7 +32,7 @@ def _refine_prompt(prompt: str) -> list:
     logger.info(f"Refined prompt: {prompt_list}")
     return prompt_list
 
-def refined_prompt(user_prompt: str) -> str:
+def refined_prompt(user_prompt: str):
     """
     Refines the user-provided prompt into a more detailed and structured prompt suitable for an image generator.
 
@@ -43,7 +43,18 @@ def refined_prompt(user_prompt: str) -> str:
     :return: The refined prompt as a string, based on the model's response.
     """
     prompt = _refine_prompt(user_prompt)
-    answer = generate_response(prompt)
-    refined_prompt = answer['choices'][0]['message']['content']
-    logger.info(f"Refined prompt: {refined_prompt}")
+    answer = generate_non_streaming_response(prompt)
+    if isinstance(answer, str):
+            # Directly use the string content
+            return answer
+    elif hasattr(answer, '__iter__'):
+        # If answer is iterable (generator), convert to list
+        answer_list = list(answer)
+        if not answer_list:
+            raise ValueError("No answers returned from the generator")
+        logger.info(f"Refined prompt: {answer_list}")
+        # Extract the content from the first item
+        return answer_list[0]['choices'][0]['message']['content']
+    else:
+        raise TypeError("Unexpected type for answer")
     return refined_prompt

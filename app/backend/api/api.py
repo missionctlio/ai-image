@@ -1,9 +1,12 @@
 from main import app
 from fastapi import HTTPException, Header, Request, Query, APIRouter
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import os
+import json
 import html
 import traceback
+from collections.abc import Iterator
 import logging
 
 # Set up logging configuration
@@ -28,9 +31,9 @@ class ImageResponse(BaseModel):
     """
     Response model for image generation request.
 
-    :param task_id: The task ID used for polling the status of the image generation.
+    :param taskId: The task ID used for polling the status of the image generation.
     """
-    task_id: str
+    taskId: str
 
 class DeleteImagesRequest(BaseModel):
     """
@@ -70,7 +73,7 @@ async def generate_image_endpoint(
         from app.workers.images import generate_image_task  # Import Celery task
         # Call the Celery task and get the task ID
         task = generate_image_task.delay(prompt_request.prompt, prompt_request.aspectRatio, prompt_request.usePromptRefiner)
-        return {"task_id": task.id}
+        return {"taskId": task.id}
 
     except Exception as e:
         print(traceback.format_exc())
@@ -133,12 +136,12 @@ async def delete_images(request: DeleteImagesRequest):
 
     return response
 
-@app.get("/task-status/{task_id}")
-async def get_task_status(task_id: str):
+@app.get("/task-status/{taskId}")
+async def get_task_status(taskId: str):
     """
     Endpoint for checking the status of a task.
 
-    :param task_id: The ID of the task to check.
+    :param taskId: The ID of the task to check.
     :return: A dictionary containing the status and result of the task.
     :raises HTTPException: If an internal error occurs while checking the task status.
     """
@@ -146,7 +149,7 @@ async def get_task_status(task_id: str):
 
     try:
         # Check the status of the task
-        result = AsyncResult(task_id)
+        result = AsyncResult(taskId)
         if result.state == 'SUCCESS':
             return {"status": 'SUCCESS', "result": result.result}
         elif result.state == 'FAILURE':
@@ -171,22 +174,22 @@ class ChatRequest(BaseModel):
     query: str
 
 @app.post("/chat")
-async def chat_request(request: ChatRequest) -> dict:
+async def chat(request: ChatRequest):
     """
-    Handles the chat query and returns the response.
-
-    Args:
-        request (Request): The incoming request containing the query parameter.
-
-    Returns:
-        dict: A dictionary with the chat response.
+    Generate a chat response using the requested model.
     """
-    try:
-        from app.inference.language.llama.chat import generate_chat
-        # Pass the query to the chat function
-        response = generate_chat(request.query)
-        return {"response": _escape_html(response)}
+    from app.inference.language.llama.chat import generate_chat
+    # Passing request body JSON to parameters of function _chat
+    # Request body follows ollama API's chat request format for now.
 
-    except Exception as e:
-        logger.error(f"Error: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    chat_response = generate_chat(request.query)
+
+    # Always return as streaming
+    if isinstance(chat_response, Iterator):
+        def generate_response():
+            for response in chat_response:
+                yield _escape_html(response) 
+        return StreamingResponse(generate_response(), media_type="application/x-ndjson")
+    elif chat_response is not None:
+        return json.dumps(chat_response)

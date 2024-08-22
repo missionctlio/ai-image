@@ -1,4 +1,4 @@
-from app.inference.language.llama.model import generate_response
+from app.inference.language.llama.model import generate_streaming_response
 import logging
 
 # Set up logging configuration
@@ -9,8 +9,6 @@ def _generate_chat_prompt(prompt: str) -> list:
     prompt_content = f"prompt: {prompt}"
     system_content = (
         "You are an advanced ai chatbot. You give helpful, respectful and informational answers. "
-        "You reply in markdown format whenever the response is appropriate"
-        "You return codeblocks in the format of three backticks followed by the language. "
     )
     prompt_list = [
         {"role": "system", "content": system_content}, 
@@ -31,7 +29,8 @@ def generate_chat(user_prompt: str) -> str:
     :return: A string containing the generated product chat.
     """
     prompt = _generate_chat_prompt(user_prompt)
-    answer = generate_response(prompt)
-    chat = answer['choices'][0]['message']['content']
-    logger.info(f"Generated chat: {chat}")
-    return chat
+    answer = generate_streaming_response(prompt=prompt)
+    for chunk in answer:
+        # Yield each chunk of the response.
+        yield chunk
+

@@ -6,8 +6,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Model configuration
-MODEL_NAME = "QuantFactory/Meta-Llama-3-8B-instruct-GGUF"
-MODEL_FILENAME = "Meta-Llama-3-8B-Instruct.Q8_0.gguf"
+MODEL_NAME = "QuantFactory/Meta-Llama-3.1-8B-instruct-GGUF"
+MODEL_FILENAME = "Meta-Llama-3.1-8B-Instruct.Q8_0.gguf"
 
 """
 Loads and initializes a pre-trained LLaMA model with the specified configuration.
@@ -23,7 +23,7 @@ llm = Llama.from_pretrained(
     repo_id=MODEL_NAME,
     filename=MODEL_FILENAME,
     n_gpu_layers=-1,
-    n_ctx=512,
+    n_ctx=8192,
     n_predict=100,
     top_k=40,
     repeat_penalty=1.1,
@@ -38,10 +38,36 @@ llm = Llama.from_pretrained(
     inp_suffix="assistant\n\n",
 )
 logger.info("LLaMA model loaded successfully.")
+def generate_streaming_response(prompt: str) -> iter:
+    """
+    Generates a streaming response from the model based on the provided prompt.
 
-def generate_response(prompt:str) -> str:
-      answer = llm.create_chat_completion(
+    This function uses the LLaMA model to generate a streaming response to the given prompt.
+
+    :param prompt: The prompt to send to the model.
+    :return: A generator that yields cleaned chunks as they arrive.
+    """
+    logger.info("Streaming Chat")
+    response_stream = llm.create_chat_completion(
+        messages=prompt,
+        stream=True
+    )
+    for chunk in response_stream:
+        delta = chunk['choices'][0]['delta']
+        if 'content' in delta:
+            print(delta['content'], end="")
+            yield delta['content']
+def generate_non_streaming_response(prompt: str) -> str:
+    """
+    Generates a non-streaming response from the model based on the provided prompt.
+
+    This function uses the LLaMA model to generate a response to the given prompt in a non-streaming mode.
+
+    :param prompt: The prompt to send to the model.
+    :return: The response content from the model.
+    """
+    answer = llm.create_chat_completion(
         messages=prompt,
     )
-      return answer
-      
+    response_content = answer['choices'][0]['message']['content']
+    return response_content

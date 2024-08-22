@@ -1,4 +1,4 @@
-from app.inference.language.llama.model import generate_response
+from app.inference.language.llama.model import generate_non_streaming_response
 import logging
 
 # Set up logging configuration
@@ -29,7 +29,7 @@ def _generate_description_prompt(prompt: str) -> list:
     logger.info(f"Generated description prompt: {prompt_list}")
     return prompt_list
 
-def generate_description(user_prompt: str) -> str:
+def generate_description(user_prompt: str):
     """
     Generates a product description based on the provided user prompt.
 
@@ -41,7 +41,7 @@ def generate_description(user_prompt: str) -> str:
     :return: A string containing the generated product description.
     """
     prompt = _generate_description_prompt(user_prompt)
-    answer = generate_response(prompt)
-    description = answer['choices'][0]['message']['content']
+    answer = generate_non_streaming_response(prompt)
+    description = answer
     logger.info(f"Generated description: {description}")
     return description
