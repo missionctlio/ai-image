@@ -1,5 +1,5 @@
 from main import app
-from fastapi import HTTPException, Header, Request, Query, APIRouter
+from fastapi import HTTPException, Header, Request, Query, APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import os
@@ -8,6 +8,8 @@ import html
 import traceback
 from collections.abc import Iterator
 import logging
+import asyncio
+from app.inference.language.llama.chat import generate_chat
 
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -173,23 +175,34 @@ def _escape_html(text: str) -> str:
 class ChatRequest(BaseModel):
     query: str
 
-@app.post("/chat")
-async def chat(request: ChatRequest):
+@router.websocket("/ws/chat")
+async def websocket_chat_endpoint(websocket: WebSocket):
     """
-    Generate a chat response using the requested model.
+    WebSocket endpoint for generating a chat response.
     """
-    from app.inference.language.llama.chat import generate_chat
-    # Passing request body JSON to parameters of function _chat
-    # Request body follows ollama API's chat request format for now.
+    await websocket.accept()
 
+    try:
+        while True:
+            # Receive the query from the WebSocket client
+            data = await websocket.receive_text()
+            logger.info(f"Received query: {data}")
 
-    chat_response = generate_chat(request.query)
+            # Generate chat response
+            chat_response = generate_chat(data)
 
-    # Always return as streaming
-    if isinstance(chat_response, Iterator):
-        def generate_response():
-            for response in chat_response:
-                yield _escape_html(response) 
-        return StreamingResponse(generate_response(), media_type="application/x-ndjson")
-    elif chat_response is not None:
-        return json.dumps(chat_response)
+            if isinstance(chat_response, Iterator):
+                # Stream the response back to the client in chunks
+                for response in chat_response:
+                    await websocket.send_text(_escape_html(response))
+                    await asyncio.sleep(0.001)  # Adjust delay to simulate typing
+                await websocket.send_text('[END]')  # End of message indicator
+            elif chat_response is not None:
+                await websocket.send_text(_escape_html(chat_response))
+                await websocket.send_text('[END]')  # End of message indicator
+
+    except WebSocketDisconnect:
+        logger.info("Client disconnected from WebSocket")
+    except Exception as e:
+        logger.error(f"Error occurred: {e}")
+        await websocket.send_text("Error: Something went wrong.")
