@@ -69,9 +69,12 @@ from app.backend.api.auth import router as auth_router
 app.include_router(auth_router, prefix="/auth")
 
 # Include the API routes
-from app.backend.api.api import router as api_router
-app.include_router(api_router)
+from app.backend.api.inference.image import router as image_router
+app.include_router(image_router, prefix="/inference/image")
 
+
+from app.backend.api.inference.language import router as auth_router
+app.include_router(auth_router, prefix="/inference/language")
 
 # Create all tables (if they don't exist)
 Base.metadata.create_all(bind=engine)

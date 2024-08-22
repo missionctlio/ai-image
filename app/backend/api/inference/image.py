@@ -1,15 +1,10 @@
-from main import app
-from fastapi import HTTPException, Header, Request, Query, APIRouter, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
+from fastapi import HTTPException, Header, Request, Query, APIRouter
 from pydantic import BaseModel
 import os
-import json
-import html
 import traceback
-from collections.abc import Iterator
 import logging
-import asyncio
-from app.inference.language.llama.chat import generate_chat
+from celery.result import AsyncResult
+from app.workers.images import generate_image_task
 
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,13 +16,11 @@ class PromptRequest(BaseModel):
     """
     Request model for generating an image.
 
-    :param prompt: The text prompt for image generation.
+    :param userPrompt: The text prompt for image generation.
     :param aspectRatio: The desired aspect ratio of the generated image.
-    :param usePromptRefiner: Boolean indicating whether to use prompt refinement.
     """
-    prompt: str
+    userPrompt: str
     aspectRatio: str
-    usePromptRefiner: bool
 
 class ImageResponse(BaseModel):
     """
@@ -45,8 +38,7 @@ class DeleteImagesRequest(BaseModel):
     """
     image_ids: list[str]
 
-
-@app.post("/generate-image")
+@router.post("/generate-image")
 async def generate_image_endpoint(
     request: Request,
     prompt_request: PromptRequest,
@@ -72,16 +64,16 @@ async def generate_image_endpoint(
         
         # Log or validate the API key if needed
         logger.info(f"Prompt Request: {prompt_request}")
-        from app.workers.images import generate_image_task  # Import Celery task
+
         # Call the Celery task and get the task ID
-        task = generate_image_task.delay(prompt_request.prompt, prompt_request.aspectRatio, prompt_request.usePromptRefiner)
+        task = generate_image_task.delay(prompt_request.userPrompt, prompt_request.aspectRatio)
         return {"taskId": task.id}
 
     except Exception as e:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/delete-images/")
+@router.delete("/delete-images/")
 async def delete_images(request: DeleteImagesRequest):
     """
     Endpoint for deleting images based on their IDs.
@@ -138,7 +130,7 @@ async def delete_images(request: DeleteImagesRequest):
 
     return response
 
-@app.get("/task-status/{taskId}")
+@router.get("/task-status/{taskId}")
 async def get_task_status(taskId: str):
     """
     Endpoint for checking the status of a task.
@@ -147,8 +139,6 @@ async def get_task_status(taskId: str):
     :return: A dictionary containing the status and result of the task.
     :raises HTTPException: If an internal error occurs while checking the task status.
     """
-    from celery.result import AsyncResult
-
     try:
         # Check the status of the task
         result = AsyncResult(taskId)
@@ -159,50 +149,6 @@ async def get_task_status(taskId: str):
         else:
             return {"status": result.state}
     except Exception as e:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-def _escape_html(text: str) -> str:
-    """Escape HTML characters in a given text.
-
-    Args:
-        text (str): The text to escape.
-
-    Returns:
-        str: The HTML-escaped text.
-    """
-    return html.escape(text) 
-class ChatRequest(BaseModel):
-    query: str
-
-@router.websocket("/ws/chat")
-async def websocket_chat_endpoint(websocket: WebSocket):
-    """
-    WebSocket endpoint for generating a chat response.
-    """
-    await websocket.accept()
-
-    try:
-        while True:
-            # Receive the query from the WebSocket client
-            data = await websocket.receive_text()
-            logger.info(f"Received query: {data}")
-
-            # Generate chat response
-            chat_response = generate_chat(data)
-
-            if isinstance(chat_response, Iterator):
-                # Stream the response back to the client in chunks
-                for response in chat_response:
-                    await websocket.send_text(_escape_html(response))
-                    await asyncio.sleep(0.001)  # Adjust delay to simulate typing
-                await websocket.send_text('[END]')  # End of message indicator
-            elif chat_response is not None:
-                await websocket.send_text(_escape_html(chat_response))
-                await websocket.send_text('[END]')  # End of message indicator
-
-    except WebSocketDisconnect:
-        logger.info("Client disconnected from WebSocket")
-    except Exception as e:
-        logger.error(f"Error occurred: {e}")
-        await websocket.send_text("Error: Something went wrong.")
