@@ -67,10 +67,10 @@ async def serve_static(filename: str):
     else:
         raise HTTPException(status_code=404, detail="File not found")
 
-from app.backend.api.auth import router as auth_router
-from app.backend.api.inference.image import router as image_router
-from app.backend.api.inference.language import router as language_router
-from app.backend.api.users import router as user_router
+from app.api.auth import router as auth_router
+from app.api.inference.image import router as image_router
+from app.api.inference.language import router as language_router
+from app.api.users import router as user_router
 
 app.include_router(auth_router, prefix="/auth")
 app.include_router(image_router, prefix="/inference/image")
