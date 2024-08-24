@@ -1,4 +1,3 @@
-fastapi
 uvicorn[standard]
 sse-starlette
 starlette
@@ -23,3 +22,6 @@ sqlalchemy
 psycopg2-binary 
 alembic
 sqlalchemy-utils
+python-jose 
+pydantic
+pathlib
