@@ -8,7 +8,7 @@ import torch
 from huggingface_hub import login
 import logging
 # Import the database session and models
-from app.db.config import get_db, Base, engine
+from app.db.database import get_db, Base, engine
 
 load_dotenv()
 
@@ -68,13 +68,17 @@ async def serve_static(filename: str):
 from app.backend.api.auth import router as auth_router
 app.include_router(auth_router, prefix="/auth")
 
-# Include the API routes
+# Include the Inference image routes
 from app.backend.api.inference.image import router as image_router
 app.include_router(image_router, prefix="/inference/image")
 
-
+# Include Inference language routes
 from app.backend.api.inference.language import router as auth_router
 app.include_router(auth_router, prefix="/inference/language")
+
+# Include User routes
+from app.backend.api.users import router as user_router
+app.include_router(user_router, prefix="/users")
 
 # Create all tables (if they don't exist)
 Base.metadata.create_all(bind=engine)
