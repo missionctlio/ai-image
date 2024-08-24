@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import the Base from your config file
-from app.db.config import Base
+from app.db.database import Base
 
 # Load environment variables from .env file if you're using one
 from dotenv import load_dotenv
@@ -38,14 +38,15 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
+
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-from app.db.config import validate_database
+from app.db.database import validate_database
 
 validate_database()
 
