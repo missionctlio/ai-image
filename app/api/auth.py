@@ -52,24 +52,44 @@ def verify_token(token: str):
 
 class LoginRequest(BaseModel):
     email: str
-    password: str
+    token: str
 
 class LoginResponse(BaseModel):
     access_token: str
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
+    logger.info(f"Attempting login with email: {request.email}")
+    
     # Check if the user exists
     user = db.query(User).filter(User.email == request.email).first()
-
-    if not user or not pwd_context.verify(request.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+    
+    if not user:
+        logger.info(f"User not found. Creating new user with email: {request.email}")
+        user = User(
+            uuid=uuid.uuid4(),
+            email=request.email,
+            name=request.name,  # Assuming `name` is part of the `LoginRequest` schema
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        logger.info(f"New user created with UUID: {user.uuid}")
+    
+    # Verify the provided token if it exists
+    if request.token:
+        try:
+            logger.info("Verifying token")
+            verify_token(request.token)
+            logger.info("Token verification successful")
+        except HTTPException as e:
+            logger.error("Token verification failed")
+            raise e
 
     # Generate JWT token for the user
+    logger.info(f"Generating JWT token for user with UUID: {user.uuid}")
     access_token = create_access_token(data={"sub": str(user.uuid)})
     
     return {"access_token": access_token}
