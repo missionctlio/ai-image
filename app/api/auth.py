@@ -25,22 +25,38 @@ logger = logging.getLogger(__name__)
 class TokenData(BaseModel):
     access_token: str
 
+def verify_token(access_token: str):
+    try:
+        CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+        if not CLIENT_ID:
+            raise ValueError("Google CLIENT_ID not found in environment variables.")
+        
+        # Verify the token using Google's library
+        id_info = id_token.verify_oauth2_token(access_token, requests.Request(), CLIENT_ID, clock_skew_in_seconds=10)
+        user_info = {
+            "name": id_info.get("name"),
+            "given_name": id_info.get("given_name"),
+            "picture": id_info.get("picture"),
+            "email": id_info.get("email")
+        }
+
+        return user_info
+
+    except ValueError as e:
+        logger.error(f"Token verification failed: {e}")
+        error_message = str(e)
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=error_message,
+        )
+
 def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
     if authorization:
         token = authorization.split("Bearer ")[-1]
         try:
-            # Verify the token
-            CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-            if not CLIENT_ID:
-                raise ValueError("Google CLIENT_ID not found in environment variables.")
-
-            id_info = id_token.verify_oauth2_token(token, requests.Request(), CLIENT_ID, clock_skew_in_seconds=10)
-            user_info = {
-                "name": id_info.get("name"),
-                "given_name": id_info.get("given_name"),
-                "picture": id_info.get("picture"),
-                "email": id_info.get("email")
-            }
+            # Verify the token and get user info
+            user_info = verify_token(token)
 
             email = user_info['email']
             name = user_info.get('given_name', 'Unknown')
@@ -75,41 +91,11 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
 
             return user_info
 
-        except ValueError as e:
-            logger.error(f"Token verification failed: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=str(e),
-            )
+        except HTTPException as e:
+            logger.error(f"Authentication failed: {e.detail}")
+            raise e
     raise HTTPException(status_code=401, detail="Authorization token is required")
 
-# Function to verify the token
-def verify_token(access_token: str):
-    try:
-        CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-        if not CLIENT_ID:
-            raise ValueError("Google CLIENT_ID not found in environment variables.")
-        
-        # Verify the token using Google's library
-        id_info = id_token.verify_oauth2_token(access_token, requests.Request(), CLIENT_ID, clock_skew_in_seconds=10)
-        user_info = {
-            "name": id_info.get("name"),
-            "given_name": id_info.get("given_name"),
-            "picture": id_info.get("picture"),
-            "email": id_info.get("email")
-        }
-
-        return user_info
-
-    except ValueError as e:
-        logger.error(f"Token verification failed: {e}")
-        error_message = str(e)
-
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=error_message,
-        )
-    
 @router.post("/token")
 def verify_jwt(token_data: TokenData, db: Session = Depends(get_db)):
-    return verify_token(token_data.access_token, db)
+    return verify_token(token_data.access_token)
