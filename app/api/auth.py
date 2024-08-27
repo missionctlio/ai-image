@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 import redis
 from app.db.models import User  # Adjust this import based on your directory structure
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
 import logging
+import time
 import os
+from jose import JWTError, jwt
 
 # Initialize Redis connection
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -25,6 +27,14 @@ logger = logging.getLogger(__name__)
 class TokenData(BaseModel):
     access_token: str
 
+class RefreshTokenData(BaseModel):
+    refresh_token: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    user_info: dict
+
 def verify_token(access_token: str):
     try:
         CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -33,6 +43,16 @@ def verify_token(access_token: str):
         
         # Verify the token using Google's library
         id_info = id_token.verify_oauth2_token(access_token, requests.Request(), CLIENT_ID, clock_skew_in_seconds=10)
+        
+        # Check if the token has expired
+        if id_info.get("exp") < time.time():
+            logger.error("Token has expired.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired",
+            )
+        
+        # Extract user info if token is valid and not expired
         user_info = {
             "name": id_info.get("name"),
             "given_name": id_info.get("given_name"),
@@ -44,12 +64,30 @@ def verify_token(access_token: str):
 
     except ValueError as e:
         logger.error(f"Token verification failed: {e}")
-        error_message = str(e)
-
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=error_message,
+            detail="Invalid access token",
         )
+
+def generate_refresh_token(user_info):
+    SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
+    ALGORITHM = "HS256"
+    payload = {
+        "sub": user_info['email'],
+        "name": user_info.get('given_name', 'Unknown'),
+        "exp": datetime.utcnow() + timedelta(days=30),  # Refresh token valid for 30 days
+        "iat": datetime.utcnow()
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+def decode_refresh_token(refresh_token: str):
+    SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
+    ALGORITHM = "HS256"
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=403, detail="Invalid refresh token")
 
 def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
     if authorization:
@@ -96,6 +134,40 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
             raise e
     raise HTTPException(status_code=401, detail="Authorization token is required")
 
-@router.post("/token")
+@router.post("/token", response_model=TokenResponse)
 def verify_jwt(token_data: TokenData, db: Session = Depends(get_db)):
-    return verify_token(token_data.access_token)
+    user_info = verify_token(token_data.access_token)
+    refresh_token = generate_refresh_token(user_info)
+    
+    return TokenResponse(
+        access_token=token_data.access_token,
+        refresh_token=refresh_token,
+        user_info=user_info
+    )
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_token(refresh_token_data: RefreshTokenData, db: Session = Depends(get_db)):
+    try:
+        # Decode the refresh token
+        payload = decode_refresh_token(refresh_token_data.refresh_token)
+        email = payload["sub"]
+        user_info = {
+            "email": email,
+            "name": payload.get("name"),
+            "given_name": payload.get("name"),
+            "picture": payload.get("picture", '')
+        }
+
+        # Generate new access and refresh tokens
+        new_access_token = generate_refresh_token(user_info)
+        new_refresh_token = generate_refresh_token(user_info)
+
+        return TokenResponse(
+            access_token=new_access_token,
+            refresh_token=new_refresh_token,
+            user_info=user_info
+        )
+    
+    except HTTPException as e:
+        logger.error(f"Token refresh failed: {e.detail}")
+        raise e
