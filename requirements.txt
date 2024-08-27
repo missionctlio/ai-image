@@ -25,3 +25,4 @@ sqlalchemy-utils
 python-jose 
 pydantic
 pathlib
+google-auth

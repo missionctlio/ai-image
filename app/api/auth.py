@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
+from google.oauth2 import id_token
+from google.auth.transport import requests
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.db.models import User  # Adjust this import based on your directory structure
-from app.db.schemas.user import UserCreate, UserRead  # Adjust this import based on your directory structure
-from passlib.context import CryptContext
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 import uuid
 import logging
-from jose import JWTError, jwt
 import os
 
 router = APIRouter()
@@ -17,79 +16,85 @@ router = APIRouter()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Password hashing utility
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Define the secret key and algorithm
-SECRET_KEY = os.getenv("SECRET_KEY", "your_secret_key")  # Replace with a secure key in production
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-# Utility functions for JWT handling
-def create_access_token(data: dict, expires_delta: timedelta = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-def verify_token(token: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise JWTError
-        return user_id
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-class LoginRequest(BaseModel):
-    email: str
-    token: str
-
-class LoginResponse(BaseModel):
+class TokenData(BaseModel):
     access_token: str
 
-@router.post("/login")
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-    logger.info(f"Attempting login with email: {request.email}")
-    
-    # Check if the user exists
-    user = db.query(User).filter(User.email == request.email).first()
-    
-    if not user:
-        logger.info(f"User not found. Creating new user with email: {request.email}")
-        user = User(
-            uuid=uuid.uuid4(),
-            email=request.email,
-            name=request.name,  # Assuming `name` is part of the `LoginRequest` schema
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        logger.info(f"New user created with UUID: {user.uuid}")
-    
-    # Verify the provided token if it exists
-    if request.token:
+def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
+    if authorization:
+        token = authorization.split("Bearer ")[-1]
         try:
-            logger.info("Verifying token")
-            verify_token(request.token)
-            logger.info("Token verification successful")
+            user_info = verify_token(token, db)  # Verify the token
+            return user_info
         except HTTPException as e:
-            logger.error("Token verification failed")
-            raise e
+            logger.error(f"Authentication failed: {e.detail}")
+            raise HTTPException(status_code=e.status_code, detail=e.detail)
+    raise HTTPException(status_code=401, detail="Authorization token is required")
 
-    # Generate JWT token for the user
-    logger.info(f"Generating JWT token for user with UUID: {user.uuid}")
-    access_token = create_access_token(data={"sub": str(user.uuid)})
+
+# Function to verify the token
+def verify_token(access_token: str, db: Session = Depends(get_db)):
+    try:
+        # Specify the CLIENT_ID of the app that accesses the backend
+        CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+        if not CLIENT_ID:
+            raise ValueError("Google CLIENT_ID not found in environment variables.")
+
+        # Verify the token using Google's library
+        id_info = id_token.verify_oauth2_token(access_token, requests.Request(), CLIENT_ID, clock_skew_in_seconds=10)
+        user_info = {
+            "name": id_info.get("name"),
+            "given_name": id_info.get("given_name"),
+            "picture": id_info.get("picture"),
+            "email": id_info.get("email")
+        }
+
+        # The token is valid. Extract user information if needed.
+        email = user_info['email']
+        name = user_info.get('given_name', 'Unknown')  # Use 'Unknown' as a default value if 'given_name' is not present
+        
+        # Check if the user exists in the database
+        user = db.query(User).filter(User.email == email).first()
+        
+        if not user:
+            logger.info(f"User not found. Creating new user with email: {email}")
+            user = User(
+                uuid=uuid.uuid4(),
+                email=email,
+                name=name,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            logger.info(f"New user created with UUID: {user.uuid}, {id_info}")
+        else:
+            logger.info(f"User {user.email} found, verifying token")
     
-    return {"access_token": access_token}
+        return user_info
+    except ValueError as e:
+        # Log the detailed error message
+        logger.error(f"Token verification failed: {e}")
+        
+        # Extract the error detail from the exception
+        error_message = str(e)
+
+        # Map common errors to specific HTTP responses if needed
+        if 'token expired' in error_message:
+            detail = "Token has expired"
+        elif 'token malformed' in error_message:
+            detail = "Token is malformed"
+        elif 'token revoked' in error_message:
+            detail = "Token has been revoked"
+        else:
+            detail = "Invalid token"
+
+        # Raise an HTTP exception with a descriptive detail message
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=error_message,
+        )
+    
+@router.post("/token")
+def verify_jwt(token_data: TokenData, db: Session = Depends(get_db)):
+    return verify_token(token_data.access_token, db)

@@ -1,10 +1,13 @@
-from fastapi import HTTPException, Header, Request, Query, APIRouter
+from fastapi import HTTPException, Header, Request, APIRouter, Depends
 from pydantic import BaseModel
 import os
 import traceback
 import logging
 from celery.result import AsyncResult
 from app.workers.images import generate_image_task
+from app.api.auth import get_current_user  # Import the token verification function
+from app.db.database import get_db
+from sqlalchemy.orm import Session
 
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,31 +41,25 @@ class DeleteImagesRequest(BaseModel):
     """
     image_ids: list[str]
 
-@router.post("/generate-image")
+@router.post("/generate-image", response_model=ImageResponse)
 async def generate_image_endpoint(
     request: Request,
     prompt_request: PromptRequest,
     authorization: str = Header(None),
-    api_key: str = Query(None)
+    current_user: dict = Depends(get_current_user)  # Ensure authentication
 ):
     """
     Endpoint for generating an image based on a prompt and aspect ratio.
 
     :param request: The HTTP request object.
     :param prompt_request: The request body containing prompt and aspect ratio.
-    :param authorization: Optional authorization header for API key.
-    :param api_key: Optional query parameter for API key.
+    :param authorization: Authorization header containing the Bearer token.
+    :param current_user: The current authenticated user.
     :return: A dictionary containing the task ID for polling status.
-    :raises HTTPException: If API key is missing or an internal error occurs.
+    :raises HTTPException: If an internal error occurs.
     """
     try:
-        # Determine which method to use for the API key
-        api_key = api_key or (authorization.split("Bearer ")[-1] if authorization and "Bearer " in authorization else None)
-        
-        if not api_key:
-            raise HTTPException(status_code=401, detail="API key is required")
-        
-        # Log or validate the API key if needed
+        # Log the prompt request
         logger.info(f"Prompt Request: {prompt_request}")
 
         # Call the Celery task and get the task ID
@@ -73,12 +70,18 @@ async def generate_image_endpoint(
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/delete-images/")
-async def delete_images(request: DeleteImagesRequest):
+@router.delete("/delete-images/", response_model=dict)
+async def delete_images(
+    request: DeleteImagesRequest,
+    authorization: str = Header(None),
+    current_user: dict = Depends(get_current_user)  # Ensure authentication
+):
     """
     Endpoint for deleting images based on their IDs.
 
     :param request: The request body containing a list of image IDs to delete.
+    :param authorization: Authorization header containing the Bearer token.
+    :param current_user: The current authenticated user.
     :return: A dictionary containing deleted files and any not found files.
     :raises HTTPException: If no image IDs are provided.
     """
@@ -130,12 +133,14 @@ async def delete_images(request: DeleteImagesRequest):
 
     return response
 
-@router.get("/task-status/{taskId}")
-async def get_task_status(taskId: str):
+@router.get("/task-status/{taskId}", response_model=dict)
+async def get_task_status(taskId: str, authorization: str = Header(None), current_user: dict = Depends(get_current_user)):
     """
     Endpoint for checking the status of a task.
 
     :param taskId: The ID of the task to check.
+    :param authorization: Authorization header containing the Bearer token.
+    :param current_user: The current authenticated user.
     :return: A dictionary containing the status and result of the task.
     :raises HTTPException: If an internal error occurs while checking the task status.
     """
@@ -151,4 +156,3 @@ async def get_task_status(taskId: str):
     except Exception as e:
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
-

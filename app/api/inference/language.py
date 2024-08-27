@@ -4,6 +4,9 @@ import logging
 import asyncio
 import html
 from collections.abc import Iterator
+from app.inference.language.llama.description import generate_description
+from app.inference.language.llama.chat import generate_chat
+from app.inference.language.llama.refinement import refined_prompt
 
 
 router = APIRouter()
@@ -17,7 +20,6 @@ class LanguageRequest(BaseModel):
 
 @router.post("/generate-description")
 async def generate_description_endpoint(request: LanguageRequest):
-    from app.inference.language.llama.description import generate_description
     try:
         description = generate_description(request.userPrompt)
         return {"description": description}
@@ -27,7 +29,6 @@ async def generate_description_endpoint(request: LanguageRequest):
 
 @router.post("/generate-refined-prompt")
 async def refined_prompt_endpoint(request: LanguageRequest):
-    from app.inference.language.llama.refinement import refined_prompt
     try:
         refinedPrompt = refined_prompt(request.userPrompt)
         return {"refinedPrompt": refinedPrompt}
@@ -40,7 +41,6 @@ def _escape_html(text: str) -> str:
 
 @router.websocket("/ws/chat")
 async def websocket_chat_endpoint(websocket: WebSocket):
-    from app.inference.language.llama.chat import generate_chat
     import torch
     torch.cuda.empty_cache()
     await websocket.accept()
