@@ -13,6 +13,7 @@ class User(Base):
     uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     email = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=False)
+    refresh_token = Column(String, nullable=True)
     last_logged_in = Column(DateTime, server_default=func.now(), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, onupdate=func.now(), nullable=False)

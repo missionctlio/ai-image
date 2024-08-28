@@ -6,6 +6,7 @@ from typing import Optional
 class UserBase(BaseModel):
     email: EmailStr
     name: str
+    refresh_token: Optional[str]
 
 class UserCreate(UserBase):
     email: EmailStr
