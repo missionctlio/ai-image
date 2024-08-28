@@ -180,7 +180,7 @@ def verify_token(token_data: TokenData, response: Response, db: Session = Depend
     )
     logger.info("Set new access and refresh tokens in cookies")
 
-    return {"userInfo": user_info}
+    return {"userInfo": user_info, "accessToken": access_token}
 
 def verify_google_oauth_token(access_token: str):
     logger.info(f"Verifying Google OAuth token: {access_token}")

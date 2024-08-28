@@ -7,7 +7,7 @@ from collections.abc import Iterator
 from app.inference.language.llama.description import generate_description
 from app.inference.language.llama.chat import generate_chat
 from app.inference.language.llama.refinement import refined_prompt
-from app.api.auth import verify_token, get_current_user
+from app.api.auth import validate_jwt_token, get_current_user
 
 
 router = APIRouter()
@@ -55,7 +55,7 @@ async def websocket_chat_endpoint(websocket: WebSocket):
 
         # Validate the token
         try:
-            user_info = verify_token(token)
+            user_info = validate_jwt_token(token)
             logger.info(f"User authenticated: {user_info}")
         except HTTPException as e:
             logger.error(f"Authentication failed: {e.detail}")
