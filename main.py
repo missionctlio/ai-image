@@ -22,7 +22,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace with the origin of your frontend
+    allow_origins=["http://localhost:3000", "dev.aesync.com"],# Replace with the origin of your frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

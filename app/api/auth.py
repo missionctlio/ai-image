@@ -1,219 +1,183 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, status, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from pydantic import BaseModel
-from google.oauth2 import id_token
-from google.auth.transport import requests
 from sqlalchemy.orm import Session
 from app.db.database import get_db
-from app.db.models import User  # Adjust this import based on your directory structure
+from app.db.models import User
 from datetime import datetime, timezone, timedelta
 import uuid
 import logging
-import time
 import os
 from jose import JWTError, jwt
+from google.oauth2 import id_token
+from google.auth.transport import requests
+import time
 
 router = APIRouter()
 
 # Logger configuration
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
+# Constants from environment variables
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-REFRESH_TOKEN_EXPIRE_DAYS = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 30))
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+if not GOOGLE_CLIENT_ID:
+    logger.error("Google CLIENT_ID not found in environment variables")
+    raise ValueError("Google CLIENT_ID not found in environment variables.")
+
+# Calculate max age in seconds
+ACCESS_TOKEN_MAX_AGE_SECONDS = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+REFRESH_TOKEN_MAX_AGE_SECONDS = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
 
 class TokenData(BaseModel):
     access_token: str
 
-def create_jwt_token(data: dict, expires_delta: timedelta = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    logger.info(f"Created JWT token with expiry: {expire}")
+def create_jwt_token(data: dict, expires_delta: timedelta):
+    expire = datetime.utcnow() + expires_delta
+    data.update({"exp": expire})
+    encoded_jwt = jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+    logger.info(f"Created JWT token with expiry {expire} and data {data}")
     return encoded_jwt
 
-def generate_tokens(user_info: dict):
-    logger.info("Generating new access and refresh tokens")
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    
-    access_token = create_jwt_token(
-        data={"sub": user_info["email"], "name": user_info["name"], "photo": user_info["picture"]},
-        expires_delta=access_token_expires
-    )
-    refresh_token = create_jwt_token(
-        data={"sub": user_info["email"]},
-        expires_delta=refresh_token_expires
-    )
-    
-    logger.info(f"Generated access token: {access_token}")
-    logger.info(f"Generated refresh token: {refresh_token}")
+def generate_tokens(user: User):
+    logger.info(f"Generating access and refresh tokens for user with email {user.email}")
+
+    # Access token includes UUID in 'sub' and user details
+    token_data = {
+        "sub": str(user.uuid), 
+        "email": user.email, 
+        "name": user.name
+    }
+    access_token = create_jwt_token(token_data, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    refresh_token = create_jwt_token(token_data, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
+
+    logger.info(f"Tokens generated for user with email {user.email}")
     return access_token, refresh_token
 
 def validate_jwt_token(token: str):
-    logger.info(f"Validating JWT token: {token}")
+    logger.info("Validating JWT token")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            logger.error("Token payload does not contain 'sub'")
+        if "sub" not in payload:
+            logger.error(f"Token validation failed: 'sub' claim missing for token {token}")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-        logger.info(f"Token validated successfully for email: {email}")
+        logger.info(f"JWT token validated successfully for email {payload.get('email')}")
         return payload
     except JWTError as e:
-        logger.error(f"Token validation failed: {e}")
+        logger.error(f"Token validation failed with error: {str(e)}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 async def get_current_user(request: Request, db: Session = Depends(get_db)):
     logger.info("Fetching current user")
     access_token = request.cookies.get("access_token")
-    refresh_token = request.cookies.get("refresh_token")
-
-    email = None  # Initialize email
-
-    if not access_token:
-        logger.error("Access token missing in cookies")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token missing")
-
-    # Validate the access token
-    try:
-        token_data = validate_jwt_token(access_token)
-        logger.info(f"Access token validated successfully {access_token}")
-        email = token_data.get("sub")
-        logger.info(f"Access token validated, email extracted: {email}")
-    except HTTPException:
-        logger.info("Access token invalid, attempting to refresh")
-        if not refresh_token:
-            logger.error("Refresh token missing in cookies")
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token missing")
-
+    if access_token:
         try:
-            # Validate the refresh token
-            validate_jwt_token(refresh_token)
-            logger.info("Refresh token validated successfully")
-
-            # Attempt to find or create the user
-            user = db.query(User).filter(User.email == email).first()
+            payload = validate_jwt_token(access_token)
+            user_uuid = payload.get("sub")
+            user = db.query(User).filter(User.uuid == uuid.UUID(user_uuid)).first()
             if not user:
-                logger.info(f"User with email {email} not found, creating new user")
-                user = User(
-                    uuid=uuid.uuid4(),
-                    email=email,
-                    name="Unknown",  # Default values, should be updated later
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
-                    refresh_token=refresh_token
-                )
-                db.add(user)
-                db.commit()
-                logger.info(f"New user created with email {email}")
-            else:
-                logger.info(f"User with email {email} found")
-
-            new_access_token, _ = generate_tokens({"email": user.email, "name": user.name, "picture": user.photo})
-            response = Response()
-            response.set_cookie(
-                key="access_token", value=f"{new_access_token}", httponly=True, secure=True, max_age=60*60
-            )
-            logger.info(f"New access token set in cookies")
+                logger.error(f"User not found with email {payload.get('email')}")
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
             return user
-
         except HTTPException:
-            logger.error("Invalid refresh token")
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+            logger.warning(f"Access token invalid or expired for token {access_token}")
 
-    # Retrieve user from the database
-    if email:
-        user = db.query(User).filter(User.email == email).first()
+    logger.warning("Access token missing or invalid, attempting refresh")
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token Expired")
+    return await refresh_access_token(request, db)
+
+@router.post("/refresh")
+async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
+    logger.info("Refreshing access token")
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        logger.error("Refresh token missing")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token missing")
+
+    try:
+        payload = validate_jwt_token(refresh_token)
+        user_uuid = payload.get("sub")
+        user = db.query(User).filter(User.uuid == uuid.UUID(user_uuid)).first()
         if not user:
-            logger.error(f"User with email {email} not found")
+            logger.error(f"User not found during refresh for UUID {user_uuid}")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-        logger.info(f"User {user.email} found")
-        return user
-    else:
-        logger.error("Invalid access token, no email found")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+
+        new_access_token, _ = generate_tokens(user)
+        response = Response()
+        response.set_cookie(
+            key="access_token",
+            value=new_access_token,
+            httponly=True,
+            secure=True,
+            max_age=ACCESS_TOKEN_MAX_AGE_SECONDS,
+            samesite="None",
+            path="/"  # Ensure the cookie is available site-wide
+        )
+        logger.info(f"Access token refreshed and set in cookies for user with email {payload.get('email')}")
+        return response
+
+    except JWTError:
+        logger.error(f"Invalid refresh token: {refresh_token}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
 @router.post("/token")
 def verify_token(token_data: TokenData, response: Response, db: Session = Depends(get_db)):
-    logger.info("Verifying token and generating new tokens")
-    # Verify the Google OAuth token
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    logger.info("Verifying Google OAuth token and generating JWT")
     user_info = verify_google_oauth_token(token_data.access_token)
-    logger.info(f"Google OAuth token verified, user info: {user_info}")
-    
-    # Generate JWT and refresh tokens
-    access_token, refresh_token = generate_tokens(user_info)
-    
-    logger.info(f"Generated new access and refresh tokens")
-    
-    # Store refresh token in the user record
+
     user = db.query(User).filter(User.email == user_info["email"]).first()
     if not user:
-        logger.info(f"Creating new user with email {user_info['email']}")
         user = User(
             uuid=uuid.uuid4(),
             email=user_info["email"],
             name=user_info["name"],
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
-            refresh_token=refresh_token
+            refresh_token=None  # You might want to initialize this appropriately
         )
         db.add(user)
+        logger.info(f"New user created with email {user_info['email']}")
     else:
-        logger.info(f"Updating refresh token for existing user {user_info['email']}")
-        user.refresh_token = refresh_token
+        user.refresh_token = None  # Update as needed
+        logger.info(f"User's refresh token updated for email {user_info['email']}")
 
     db.commit()
-    logger.info(f"User record updated with new refresh token")
 
-    # Set tokens as HTTP-only secure cookies
+    access_token, refresh_token = generate_tokens(user)
+
     response.set_cookie(
-        key="access_token", value=f"{access_token}", httponly=True, secure=True, max_age=60*60
+        key="access_token", value=access_token, httponly=True, secure=True, max_age=ACCESS_TOKEN_MAX_AGE_SECONDS, samesite="None"
     )
     response.set_cookie(
-        key="refresh_token", value=refresh_token, httponly=True, secure=True, max_age=60*60*24*30
+        key="refresh_token", value=refresh_token, httponly=True, secure=True, max_age=REFRESH_TOKEN_MAX_AGE_SECONDS, samesite="None"
     )
-    logger.info("Set new access and refresh tokens in cookies")
+    logger.info(f"Access and refresh tokens set in cookies for email {user_info['email']}")
 
     return {"userInfo": user_info, "accessToken": access_token}
 
 def verify_google_oauth_token(access_token: str):
-    logger.info(f"Verifying Google OAuth token: {access_token}")
     try:
-        CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-        if not CLIENT_ID:
-            logger.error("Google CLIENT_ID not found in environment variables")
-            raise ValueError("Google CLIENT_ID not found in environment variables.")
-        
-        # Verify the token using Google's library
-        id_info = id_token.verify_oauth2_token(access_token, requests.Request(), CLIENT_ID, clock_skew_in_seconds=10)
-        
-        # Check if the token has expired
+        id_info = id_token.verify_oauth2_token(access_token, requests.Request(), GOOGLE_CLIENT_ID, clock_skew_in_seconds=10)
         if id_info.get("exp") < time.time():
-            logger.error("Google OAuth token has expired")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token has expired",
-            )
-        
-        # Extract user info if token is valid and not expired
+            logger.error(f"Google OAuth token expired with expiration {id_info.get('exp')}")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
+
         user_info = {
             "name": id_info.get("name"),
             "given_name": id_info.get("given_name"),
             "picture": id_info.get("picture"),
             "email": id_info.get("email")
         }
-        logger.info(f"Google OAuth token verified successfully, user info: {user_info}")
-
+        logger.info(f"Google OAuth token verified with user info {user_info}")
         return user_info
 
     except ValueError as e:
-        logger.error(f"Google OAuth token verification failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=e)
+        logger.error(f"Google OAuth token verification failed with error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
