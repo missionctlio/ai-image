@@ -8,10 +8,10 @@ from app.workers.images import generate_image_task
 from app.api.auth import get_current_user  # Import the token verification function
 from app.db.database import get_db
 from sqlalchemy.orm import Session
+from app.utils.logging import get_logger
 
 # Set up logging configuration
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 

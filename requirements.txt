@@ -26,3 +26,4 @@ python-jose
 pydantic
 pathlib
 google-auth
+python-json-logger 

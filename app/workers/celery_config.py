@@ -1,6 +1,9 @@
 from celery import Celery
 import os
+from app.utils.logging import configure_celery_logging
 
+# Configure JSON logging for Celery
+configure_celery_logging()
 # Configure Celery
 celery = Celery(
     'celery_app',

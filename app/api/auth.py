@@ -11,15 +11,13 @@ from jose import JWTError, jwt
 from google.oauth2 import id_token
 from google.auth.transport import requests
 import time
+from app.utils.logging import get_logger
+
+# Set up logging configuration
+logger = get_logger(__name__)
 
 router = APIRouter()
 
-# Logger configuration
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 # Constants from environment variables
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")

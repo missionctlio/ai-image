@@ -12,13 +12,12 @@ from app.inference.language.llama.description import generate_description
 from app.inference.language.llama.chat import generate_chat
 from app.inference.language.llama.refinement import refined_prompt
 from app.api.auth import validate_jwt_token, get_current_user
-
-
-router = APIRouter()
+from app.utils.logging import get_logger
 
 # Set up logging configuration
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+
+router = APIRouter()
 
 class LanguageRequest(BaseModel):
     userPrompt: str

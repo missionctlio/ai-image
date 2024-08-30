@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 import os
 import torch
 from huggingface_hub import login
-import logging
 from app.db.database import get_db, Base, engine
 from app.helpers.jwt import create_access_token, verify_token
+from app.utils.logging import get_logger, configure_uvicorn_logging
 
 load_dotenv()
 
@@ -18,19 +18,19 @@ if not HF_TOKEN:
     raise ValueError("HUGGINGFACE_TOKEN environment variable is not set.")
 torch.cuda.empty_cache()
 
+# Configure Uvicorn logging to use JSON format
+configure_uvicorn_logging()
+
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "dev.aesync.com"],# Replace with the origin of your frontend
+    allow_origins=["http://localhost:3000", "dev.aesync.com"],  # Replace with the origin of your frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Set up logging configuration
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 login(token=HF_TOKEN, add_to_git_credential=True)
 
 # JWT Configuration
