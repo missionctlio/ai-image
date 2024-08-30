@@ -9,7 +9,7 @@ import torch
 from huggingface_hub import login
 from app.db.database import get_db, Base, engine
 from app.helpers.jwt import create_access_token, verify_token
-from app.utils.logging import get_logger, configure_uvicorn_logging
+import logging
 
 load_dotenv()
 
@@ -17,9 +17,8 @@ HF_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 if not HF_TOKEN:
     raise ValueError("HUGGINGFACE_TOKEN environment variable is not set.")
 torch.cuda.empty_cache()
+logging = logging.getLogger(__name__)
 
-# Configure Uvicorn logging to use JSON format
-configure_uvicorn_logging()
 
 app = FastAPI()
 

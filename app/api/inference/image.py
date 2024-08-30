@@ -8,10 +8,8 @@ from app.workers.images import generate_image_task
 from app.api.auth import get_current_user  # Import the token verification function
 from app.db.database import get_db
 from sqlalchemy.orm import Session
-from app.utils.logging import get_logger
 
-# Set up logging configuration
-logger = get_logger(__name__)
+logging = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -60,14 +58,14 @@ async def generate_image_endpoint(
     """
     try:
         # Log the prompt request
-        logger.info(f"Prompt Request: {prompt_request}")
+        logging.info(f"Prompt Request: {prompt_request}")
 
         # Call the Celery task and get the task ID
         task = generate_image_task.delay(prompt_request.userPrompt, prompt_request.aspectRatio)
         return {"taskId": task.id}
 
     except Exception as e:
-        logger.error(traceback.format_exc())
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/delete-images/", response_model=dict)
@@ -87,13 +85,13 @@ async def delete_images(
     """
     IMAGE_DIR = "frontend/images"
     if not request.image_ids:
-        logger.warning("No image IDs provided.")
+        logging.warning("No image IDs provided.")
         raise HTTPException(status_code=400, detail="No image IDs provided")
 
     deleted_files = []
     not_found_files = []
 
-    logger.info(f"Attempting to delete {len(request.image_ids)} images.")
+    logging.info(f"Attempting to delete {len(request.image_ids)} images.")
 
     for image_id in request.image_ids:
         # Construct file paths with and without 'original_' prefix
@@ -109,15 +107,15 @@ async def delete_images(
                 try:
                     os.remove(file_path)
                     deleted_files.append(file_path)
-                    logger.info(f"Deleted file: {file_path}")
+                    logging.info(f"Deleted file: {file_path}")
                     deleted = True
                     break  # Stop after deleting one version of the file
                 except Exception as e:
-                    logger.error(f"Failed to delete file: {file_path}. Error: {e}")
+                    logging.error(f"Failed to delete file: {file_path}. Error: {e}")
 
         if not deleted:
             not_found_files.append(image_id)
-            logger.warning(f"File not found for ID: {image_id}")
+            logging.warning(f"File not found for ID: {image_id}")
 
     # Response based on the deletion results
     if not_found_files:
@@ -126,10 +124,10 @@ async def delete_images(
             "not_found_files": not_found_files,
             "detail": "Some files were not found"
         }
-        logger.info("Deletion completed with some files not found.")
+        logging.info("Deletion completed with some files not found.")
     else:
         response = {"deleted_files": deleted_files, "detail": "All specified files deleted successfully"}
-        logger.info("All specified files deleted successfully.")
+        logging.info("All specified files deleted successfully.")
 
     return response
 
@@ -154,5 +152,5 @@ async def get_task_status(taskId: str, authorization: str = Header(None), curren
         else:
             return {"status": result.state}
     except Exception as e:
-        logger.error(traceback.format_exc())
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
