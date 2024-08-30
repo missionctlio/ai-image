@@ -3,16 +3,11 @@ import logging
 import redis
 from sqlalchemy.orm import Session
 from app.db.model.user import get_user_from_uuid
+from app.db.redis_config import redis_client
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Redis configuration
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6379
-REDIS_DB = 0
-
-redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
 
 def _generate_chat_prompt(user_uuid: str, prompt: str) -> list:
     prompt_content = f"prompt: {prompt}"
@@ -26,18 +21,17 @@ def _generate_chat_prompt(user_uuid: str, prompt: str) -> list:
     key_type = redis_client.type(conversation_id).decode('utf-8')
     
     if key_type == 'list':
-        redis_client.rpush(conversation_id, prompt_content)
+        redis_client.rpush(conversation_id, prompt)
     else:
         # Handle the case where the key type is not a list
         logger.info(f"Key {conversation_id} is of type {key_type}. Expected type: list.")
         # Optionally, clear the key and re-create it as a list
         redis_client.delete(conversation_id)
-        redis_client.rpush(conversation_id, prompt_content)
+        redis_client.rpush(conversation_id, prompt)
     
     # Retrieve and decode the Redis memory
     redis_memory = redis_client.lrange(conversation_id, 0, -1)
     redis_memory = [item.decode('utf-8') for item in redis_memory]
-    logger.info(f"Redis memory: {redis_memory}")
 
     # Append Redis conversation memory to the prompt
     system_content += "Chat Memory: \n" + "\n".join(redis_memory)
@@ -46,7 +40,7 @@ def _generate_chat_prompt(user_uuid: str, prompt: str) -> list:
         {"role": "user", "content": prompt_content}
     ]
     
-    logger.info(f"Generated chat prompt: {prompt_list}")
+    logger.info(f"Generated chat prompt: {prompt}")
     return prompt_list
 
 def generate_chat(user_uuid: str, user_prompt: str):

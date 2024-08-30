@@ -2,7 +2,7 @@ from llama_cpp import Llama
 import logging
 import torch
 import redis
-
+from app.db.redis_config import redis_client
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -10,11 +10,6 @@ logger = logging.getLogger(__name__)
 # Model configuration
 MODEL_NAME = "QuantFactory/Meta-Llama-3.1-8B-instruct-GGUF"
 MODEL_FILENAME = "Meta-Llama-3.1-8B-Instruct.Q8_0.gguf"
-
-# Redis configuration
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6379
-REDIS_DB = 0
 
 # Clear CUDA memory
 torch.cuda.empty_cache()
@@ -51,9 +46,6 @@ def load_llama_model():
 llm = load_llama_model()
 logger.info("LLaMA model loaded successfully.")
 
-# Set up Redis connection
-redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
-
 def generate_streaming_response(prompt: str, user_uuid: str) -> iter:
     """
     Generates a streaming response from the model based on the provided prompt.
@@ -82,8 +74,6 @@ def generate_streaming_response(prompt: str, user_uuid: str) -> iter:
     if key_type == 'list':
         redis_client.rpush(conversation_id, full_response_str)
     else:
-        # Handle the case where the key type is not a list
-        logger.info(f"Key {conversation_id} is of type {key_type}. Expected type: list.")
         # Optionally, clear the key and re-create it as a list
         redis_client.delete(conversation_id)
         redis_client.rpush(conversation_id,full_response_str)

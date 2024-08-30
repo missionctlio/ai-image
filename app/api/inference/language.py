@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import logging
@@ -11,6 +11,7 @@ from app.api.auth import validate_jwt_token, get_current_user
 from app.inference.language.llama.chat import generate_chat
 from app.inference.language.llama.description import generate_description
 from app.inference.language.llama.refinement import refined_prompt
+from app.db.redis_config import redis_client
 
 # Set up logging configuration
 logger = logging.getLogger(__name__)
@@ -122,7 +123,14 @@ async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(ge
     except Exception as e:
         logger.error(f"Error occurred: {e}")
         await websocket.send_text("Error: Something went wrong.")
-
+@router.delete("/delete-chat-history")
+def delete_chat_history( current_user: dict = Depends(get_current_user)):
+    conversation_id = str(current_user.uuid)  # use the user_id (sub) as the conversation_id
+    if redis_client.exists(conversation_id):
+        redis_client.delete(conversation_id)
+        return {"status": "success", "message": "Chat history deleted"}
+    else:
+        return {"status": "failure", "message": "Chat history not found"}
 def get_user_from_uuid(user_uuid: str, db: Session) -> User:
     """Fetch user from the database by UUID."""
     return db.query(User).filter(User.uuid == user_uuid).first()
