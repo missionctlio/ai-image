@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from .models import User
-from .schemas import UserCreate, UserUpdate
+from app.db.models import User
+from app.db.schemas.user import UserCreate, UserUpdate
 from uuid import UUID
 
 def get_user(db: Session, user_uuid: UUID):
@@ -34,3 +34,6 @@ def delete_user(db: Session, user_uuid: UUID):
         db.delete(db_user)
         db.commit()
     return db_user
+def get_user_from_uuid(user_uuid: str, db: Session) -> User:
+    """Fetch user from the database by UUID."""
+    return db.query(User).filter(User.uuid == user_uuid).first()

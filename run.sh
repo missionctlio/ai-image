@@ -29,4 +29,4 @@ celery -A app.workers.images worker --loglevel=info --pool=solo &
 celery -A app.workers.images.celery  flower --pool=solo --loglevel=INFO &
 
 # Start Uvicorn server
-uvicorn main:app --workers 8 --host 0.0.0.0 --port 8888 --reload
+uvicorn main:app --workers 8 --host 0.0.0.0 --log-config=logging_config.conf --port 8888 --reload

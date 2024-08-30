@@ -1,19 +1,46 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 import logging
 import asyncio
 import html
 from typing import Iterator
 from app.db.models import User
 from app.db.database import get_db
-from app.api.auth import validate_jwt_token, validate_jwt_refresh_token
+from app.api.auth import validate_jwt_token, get_current_user
 from app.inference.language.llama.chat import generate_chat
+from app.inference.language.llama.description import generate_description
 from app.inference.language.llama.refinement import refined_prompt
 
 # Set up logging configuration
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+class LanguageRequest(BaseModel):
+    userPrompt: str
+
+@router.post("/generate-description")
+async def generate_description_endpoint(request: LanguageRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        description = generate_description(request.userPrompt)
+        return {"description": description}
+    except Exception as e:
+        logger.error(f"Error generating description: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating description")
+
+@router.post("/generate-refined-prompt")
+async def refined_prompt_endpoint(request: LanguageRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        refinedPrompt = refined_prompt(request.userPrompt)
+        return {"refinedPrompt": refinedPrompt}
+    except Exception as e:
+        logger.error(f"Error generating description: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating description")
+
+def _escape_html(text: str) -> str:
+    return html.escape(text)
+
 
 @router.websocket("/ws/chat")
 async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
@@ -79,7 +106,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(ge
             data = await websocket.receive_text()
             logger.info(f"Received query: {data}")
 
-            chat_response = generate_chat(data)
+            chat_response = generate_chat(user_uuid,data)
 
             if isinstance(chat_response, Iterator):
                 for response in chat_response:

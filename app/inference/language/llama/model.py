@@ -1,6 +1,7 @@
 from llama_cpp import Llama
 import logging
 import torch
+import redis
 
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -9,6 +10,11 @@ logger = logging.getLogger(__name__)
 # Model configuration
 MODEL_NAME = "QuantFactory/Meta-Llama-3.1-8B-instruct-GGUF"
 MODEL_FILENAME = "Meta-Llama-3.1-8B-Instruct.Q8_0.gguf"
+
+# Redis configuration
+REDIS_HOST = 'localhost'
+REDIS_PORT = 6379
+REDIS_DB = 0
 
 # Clear CUDA memory
 torch.cuda.empty_cache()
@@ -45,7 +51,10 @@ def load_llama_model():
 llm = load_llama_model()
 logger.info("LLaMA model loaded successfully.")
 
-def generate_streaming_response(prompt: str) -> iter:
+# Set up Redis connection
+redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+
+def generate_streaming_response(prompt: str, user_uuid: str) -> iter:
     """
     Generates a streaming response from the model based on the provided prompt.
 
@@ -53,6 +62,8 @@ def generate_streaming_response(prompt: str) -> iter:
     :param prompt: The prompt to send to the model.
     :return: A generator that yields cleaned chunks as they arrive.
     """
+    conversation_id = "1323"
+    full_response = []
     logger.info("Streaming Chat")
     response_stream = llm.create_chat_completion(
         messages=prompt,
@@ -61,7 +72,21 @@ def generate_streaming_response(prompt: str) -> iter:
     for chunk in response_stream:
         delta = chunk['choices'][0]['delta']
         if 'content' in delta:
+            full_response.append(delta['content'])
             yield delta['content']
+    
+    conversation_id = user_uuid
+    # Check the type of the existing key in Redis
+    key_type = redis_client.type(conversation_id).decode('utf-8')
+    full_response_str = ''.join(full_response)
+    if key_type == 'list':
+        redis_client.rpush(conversation_id, full_response_str)
+    else:
+        # Handle the case where the key type is not a list
+        logger.info(f"Key {conversation_id} is of type {key_type}. Expected type: list.")
+        # Optionally, clear the key and re-create it as a list
+        redis_client.delete(conversation_id)
+        redis_client.rpush(conversation_id,full_response_str)
 
 def generate_non_streaming_response(prompt: str) -> str:
     """
@@ -75,5 +100,6 @@ def generate_non_streaming_response(prompt: str) -> str:
         messages=prompt,
     )
     response_content = answer['choices'][0]['message']['content']
+    conversation_id = "123"
+    redis_client.set(conversation_id, response_content)
     return response_content
-
