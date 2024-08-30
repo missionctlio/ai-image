@@ -1,8 +1,12 @@
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Depends, Request
 from pydantic import BaseModel
 import logging
 import asyncio
 import html
+import json
+from sqlalchemy.orm import Session
+from app.db.models import User
+from app.db.database import get_db
 from collections.abc import Iterator
 from app.inference.language.llama.description import generate_description
 from app.inference.language.llama.chat import generate_chat
@@ -43,25 +47,37 @@ def _escape_html(text: str) -> str:
 class AuthMessage(BaseModel):
     token: str
 
-@router.websocket("/ws/chat")
-async def websocket_chat_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    
-    try:
-        # Receive the first message containing the auth token
-        auth_message = await websocket.receive_text()
-        auth_data = AuthMessage.parse_raw(auth_message)
-        token = auth_data.token
+# Define the WebSocket endpoint
 
-        # Validate the token
-        try:
-            user_info = validate_jwt_token(token)
-            logger.info(f"User authenticated: {user_info}")
-        except HTTPException as e:
-            logger.error(f"Authentication failed: {e.detail}")
+
+@router.websocket("/ws/chat")
+async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
+    # Accept the WebSocket connection
+    await websocket.accept()
+
+    # Extract the query parameters from the WebSocket URL
+    query_params = websocket.query_params
+    access_token = query_params.get('access_token')
+
+    if not access_token:
+        logger.error("Access token missing from query parameters")
+        # await websocket.close(code=4000)  # Close with an error code
+        return
+
+    # Validate the token and get user info
+    try:
+        user_info = validate_jwt_token(access_token)
+        user_uuid = user_info.get("sub")
+
+        # Fetch user from the database using the user_uuid
+        user = get_user_from_uuid(user_uuid, db)
+        if not user:
+            logger.error("User not found")
             await websocket.close(code=4000)  # Close with an error code
             return
-        
+
+        logger.info(f"User authenticated: {user_info}")
+
         # Handle chat messages
         while True:
             data = await websocket.receive_text()
@@ -83,3 +99,7 @@ async def websocket_chat_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"Error occurred: {e}")
         await websocket.send_text("Error: Something went wrong.")
+
+def get_user_from_uuid(user_uuid: str, db: Session) -> User:
+    """Fetch user from the database by UUID."""
+    return db.query(User).filter(User.uuid == user_uuid).first()
