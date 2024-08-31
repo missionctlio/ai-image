@@ -87,7 +87,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
             logging.warning(f"Access token invalid or expired for token {access_token}")
 
     logging.warning("Access token missing or invalid, attempting refresh")
-    #raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token Expired")
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token Expired")
     return await refresh_access_token(request, db)
 
 @router.post("/refresh")
