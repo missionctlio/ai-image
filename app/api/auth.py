@@ -79,7 +79,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
         try:
             payload = validate_jwt_token(access_token)
             user_uuid = payload.get("sub")
-            user = get_user_from_uuid(user_uuid)
+            user = get_user_from_uuid(user_uuid, db)
             if not user:
                 logging.error(f"User not found with email {payload.get('email')}")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
@@ -102,7 +102,7 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     try:
         payload = validate_jwt_token(refresh_token)
         user_uuid = payload.get("sub")
-        user = get_user_from_uuid(user_uuid)
+        user = get_user_from_uuid(user_uuid, db)
         if not user:
             logging.error(f"User not found during refresh for UUID {user_uuid}")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
