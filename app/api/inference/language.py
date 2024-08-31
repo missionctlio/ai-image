@@ -7,6 +7,7 @@ import html
 from typing import Iterator
 from app.db.models import User
 from app.db.database import get_db
+from app.db.model.user import get_user_from_uuid
 from app.api.auth import validate_jwt_token, get_current_user, generate_tokens
 from app.inference.language.llama.chat import generate_chat
 from app.inference.language.llama.description import generate_description
@@ -142,9 +143,7 @@ def delete_chat_history( current_user: dict = Depends(get_current_user)):
         return {"status": "success", "message": "Chat history deleted"}
     else:
         return {"status": "failure", "message": "Chat history not found"}
-def get_user_from_uuid(user_uuid: str, db: Session) -> User:
-    """Fetch user from the database by UUID."""
-    return db.query(User).filter(User.uuid == user_uuid).first()
+
 def _escape_html(text: str) -> str:
     """
     Escapes HTML special characters in a given text.

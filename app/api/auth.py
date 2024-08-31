@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.db.models import User
+from app.db.model.user import get_user_from_uuid
 from datetime import datetime, timezone, timedelta
 import uuid
 import logging
@@ -78,7 +79,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
         try:
             payload = validate_jwt_token(access_token)
             user_uuid = payload.get("sub")
-            user = db.query(User).filter(User.uuid == uuid.UUID(user_uuid)).first()
+            user = get_user_from_uuid(user_uuid)
             if not user:
                 logging.error(f"User not found with email {payload.get('email')}")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
@@ -101,7 +102,7 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     try:
         payload = validate_jwt_token(refresh_token)
         user_uuid = payload.get("sub")
-        user = db.query(User).filter(User.uuid == uuid.UUID(user_uuid)).first()
+        user = get_user_from_uuid(user_uuid)
         if not user:
             logging.error(f"User not found during refresh for UUID {user_uuid}")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
@@ -142,13 +143,10 @@ def verify_token(token_data: TokenData, response: Response, db: Session = Depend
         )
         db.add(user)
         logging.info(f"New user created with email {user_info['email']}")
-    else:
-        user.refresh_token = None  # Update as needed
-        logging.info(f"User's refresh token updated for email {user_info['email']}")
-
-    db.commit()
 
     access_token, refresh_token = generate_tokens(user)
+    user.refresh_token = refresh_token
+    db.commit()
 
     response.set_cookie(
         key="access_token", value=access_token, httponly=True, secure=True, max_age=ACCESS_TOKEN_MAX_AGE_SECONDS, samesite="None"
