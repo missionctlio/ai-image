@@ -1,4 +1,4 @@
-from app.inference.language.llama.model import generate_non_streaming_response
+from app.inference.language.llama.model import LlamaModel
 import logging
 
 # Set up logging configuration
@@ -44,7 +44,9 @@ def refined_prompt(user_prompt: str):
     :return: The refined prompt as a string, based on the model's response.
     """
     prompt = _refine_prompt(user_prompt)
-    answer = generate_non_streaming_response(prompt)
+    llm_model = LlamaModel()
+    llm_model.load_llama_model()    
+    answer = llm_model.generate_non_streaming_response(prompt)
     if isinstance(answer, str):
             # Directly use the string content
             return answer

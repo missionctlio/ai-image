@@ -1,7 +1,7 @@
 import uuid
 from PIL import Image
 import logging
-from app.inference.image.flux.model import generate_image as pipe
+from app.inference.image.flux.model import FluxPipelineManager
 from app.inference.image.realesrgan.rescaler import upscale_and_resize_image
 
 # Setup logging
@@ -44,7 +44,12 @@ def generate_image(prompt: str, aspect_ratio: str) -> str:
     logger.info(f"Using dimensions: width={initial_width}, height={initial_height}")
 
     logger.info("Generating image...")
-    image = pipe(prompt,initial_width,initial_height)
+   
+    pipe = FluxPipelineManager()
+    pipe.initialize_pipeline()
+    image = pipe.generate_image(prompt,initial_width,initial_height)   
+
+    image_id = str(uuid.uuid4())   
 
     image_id = str(uuid.uuid4())
     _save_image(image, image_id)  # Save the original image

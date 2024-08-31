@@ -30,7 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # Add the middleware to the application
-app.add_middleware(JSONLoggingMiddleware)
+#app.add_middleware(JSONLoggingMiddleware)
 
 
 login(token=HF_TOKEN, add_to_git_credential=True)

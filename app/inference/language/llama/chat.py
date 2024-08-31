@@ -1,9 +1,9 @@
-from app.inference.language.llama.model import generate_streaming_response
+from app.inference.language.llama.model import LlamaModel
 import logging
 import redis
 from sqlalchemy.orm import Session
 from app.db.model.user import get_user_from_uuid
-from app.db.redis_config import redis_client
+from app.utils.redis_utils import RedisUtils
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -17,22 +17,12 @@ def _generate_chat_prompt(user_uuid: str, prompt: str) -> list:
     
     conversation_id = user_uuid
     
-    # Check the type of the existing key in Redis
-    key_type = redis_client.type(conversation_id).decode('utf-8')
+    redis_client = RedisUtils()
     
-    if key_type == 'list':
-        redis_client.rpush(conversation_id, prompt)
-    else:
-        # Handle the case where the key type is not a list
-        logger.info(f"Key {conversation_id} is of type {key_type}. Expected type: list.")
-        # Optionally, clear the key and re-create it as a list
-        redis_client.delete(conversation_id)
-        redis_client.rpush(conversation_id, prompt)
+    redis_client.append_to_redis(conversation_id, prompt)
     
-    # Retrieve and decode the Redis memory
-    redis_memory = redis_client.lrange(conversation_id, 0, -1)
-    redis_memory = [item.decode('utf-8') for item in redis_memory]
-
+    redis_memory = redis_client.get_redis_memory(conversation_id)
+    
     # Append Redis conversation memory to the prompt
     system_content += "Chat Memory: \n" + "\n".join(redis_memory)
     prompt_list = [
@@ -57,7 +47,10 @@ def generate_chat(user_uuid: str, user_prompt: str):
     :return: A string containing the generated product chat.
     """
     prompt = _generate_chat_prompt(user_uuid, user_prompt)
-    answer = generate_streaming_response(prompt=prompt, user_uuid=user_uuid)
+    # Usage:
+    llm_model = LlamaModel()
+    llm_model.load_llama_model()
+    answer = llm_model.generate_streaming_response(prompt=prompt, user_uuid=user_uuid)
     for chunk in answer:
         # Yield each chunk of the response.
         yield chunk

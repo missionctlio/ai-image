@@ -1,4 +1,4 @@
-from app.inference.language.llama.model import generate_non_streaming_response
+from app.inference.language.llama.model import LlamaModel
 import logging
 
 # Set up logging configuration
@@ -40,7 +40,9 @@ def generate_description(user_prompt: str):
     :return: A string containing the generated product description.
     """
     prompt = _generate_description_prompt(user_prompt)
-    answer = generate_non_streaming_response(prompt)
+    llm_model = LlamaModel()
+    llm_model.load_llama_model()    
+    answer = llm_model.generate_non_streaming_response(prompt)
     description = answer
     logger.info(f"Generated description: {description}")
     return description
