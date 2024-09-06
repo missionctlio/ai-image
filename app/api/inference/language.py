@@ -24,13 +24,20 @@ class LanguageRequest(BaseModel):
 
 @router.post("/generate-description")
 async def generate_description_endpoint(request: LanguageRequest, current_user: dict = Depends(get_current_user)):
+    logger.info("Received request to generate description.")
+    logger.info(f"Request payload: {request.dict()}")
+    logger.info(f"Current user: {current_user}")
+    
     try:
+        logger.info("Starting description generation.")
         description = generate_description(request.userPrompt)
+        logger.info("Description generated successfully.")
+        logger.info(f"Generated description: {description[:100]}...")  # Log first 100 characters for brevity
         return {"description": description}
     except Exception as e:
         logger.error(f"Error generating description: {str(e)}")
+        logger.exception("Exception details:")  # Logs traceback with exception details
         raise HTTPException(status_code=500, detail="Error generating description")
-
 @router.post("/generate-refined-prompt")
 async def refined_prompt_endpoint(request: LanguageRequest, current_user: dict = Depends(get_current_user)):
     try:
@@ -55,7 +62,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(ge
 
     if not access_token and not refresh_token:
         logger.error("Access token and refresh token are missing")
-        await websocket.close(code=4000)  # Close with an error code
+        #await websocket.close(code=4000)  # Close with an error code
         return
 
     # Function to validate or refresh access token
@@ -74,8 +81,6 @@ async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(ge
                 logger.warning(f"Access token validation failed: {e}")
 
         if refresh_token:
-            user_info = validate_jwt_token(refresh_token)
-            logger.info(f"Validated refresh token: {user_info}")
             try:
                 # Validate the refresh token
                 user_info = validate_jwt_token(refresh_token)

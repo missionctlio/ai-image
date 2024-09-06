@@ -1,26 +1,29 @@
 from llama_cpp import Llama
 import logging
-import redis
-from app.utils.redis_utils import RedisUtils
+from app.utils.conversational_memory import ConversationalMemory
 
 class LlamaModel:
     _instance = None
-    
+
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(LlamaModel, cls).__new__(cls, *args, **kwargs)
+            cls._instance._initialize()
         return cls._instance
 
-    def __init__(self):
+    def _initialize(self):
         if hasattr(self, 'initialized') and self.initialized:
             return  # Skip initialization if already done
         self.logger = logging.getLogger(__name__)
         self.model_name = "QuantFactory/Meta-Llama-3.1-8B-instruct-GGUF"
-        self.model_filename = "Meta-Llama-3.1-8B-Instruct.Q8_0.gguf"
+        self.model_filename = "Meta-Llama-3.1-8B-Instruct.Q2_K.gguf"
         self.llm = None
-        self.redis_client = RedisUtils()
-        self.load_llama_model()
+        self.redis_client = None  # Initialize redis_client later with conversation_id
         self.initialized = True
+
+    def set_conversation_id(self, conversation_id: str):
+        """Set the conversation ID and initialize the ConversationalMemory."""
+        self.redis_client = ConversationalMemory(conversation_id)
 
     def load_llama_model(self):
         """
@@ -47,16 +50,23 @@ class LlamaModel:
                 inp_suffix="assistant\n\n",
             )
 
-    def generate_streaming_response(self, prompt: str, user_uuid: str) -> iter:
+    def generate_streaming_response(self, prompt: str, conversation_id: str) -> iter:
         """
         Generates a streaming response from the model based on the provided prompt.
 
         :param prompt: The prompt to send to the model.
-        :param user_uuid: The unique identifier for the user.
+        :param conversation_id: The unique identifier for the conversation.
         :return: A generator that yields cleaned chunks as they arrive.
         """
         if self.llm is None:
             self.load_llama_model()
+        
+        # Set or update the conversation ID
+        self.set_conversation_id(conversation_id)
+        
+        if self.redis_client is None:
+            raise ValueError("Conversation ID not set. Use set_conversation_id() to initialize.")
+        
         self.logger.info("Streaming Chat")
         full_response = []
         response_stream = self.llm.create_chat_completion(
@@ -70,7 +80,7 @@ class LlamaModel:
                 full_response.append(content)
                 yield content
         full_response_str = ''.join(full_response)
-        self.redis_client.append_to_redis(user_uuid, full_response_str)
+        self.redis_client.append_to_memory(full_response_str)
 
     def generate_non_streaming_response(self, prompt: str) -> str:
         """

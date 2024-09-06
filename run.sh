@@ -15,7 +15,7 @@ fi
 # Activate the virtual environment
 source .venv/bin/activate
 
-# Update dependencies
+# # Update dependencies
 echo "Updating dependencies..."
 pip install -r requirements.txt > /dev/null
 

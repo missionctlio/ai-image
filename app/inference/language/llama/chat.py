@@ -3,7 +3,7 @@ import logging
 import redis
 from sqlalchemy.orm import Session
 from app.db.model.user import get_user_from_uuid
-from app.utils.redis_utils import RedisUtils
+from app.utils.conversational_memory import ConversationalMemory
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -17,11 +17,11 @@ def _generate_chat_prompt(user_uuid: str, prompt: str) -> list:
     
     conversation_id = user_uuid
     
-    redis_client = RedisUtils()
+    redis_client = ConversationalMemory(conversation_id)
     
-    redis_client.append_to_redis(conversation_id, prompt)
+    redis_client.append_to_memory(prompt)
     
-    redis_memory = redis_client.get_redis_memory(conversation_id)
+    redis_memory = redis_client.get_memory()
     
     # Append Redis conversation memory to the prompt
     system_content += "Chat Memory: \n" + "\n".join(redis_memory)
@@ -50,7 +50,7 @@ def generate_chat(user_uuid: str, user_prompt: str):
     # Usage:
     llm_model = LlamaModel()
     llm_model.load_llama_model()
-    answer = llm_model.generate_streaming_response(prompt=prompt, user_uuid=user_uuid)
+    answer = llm_model.generate_streaming_response(prompt=prompt, conversation_id=user_uuid)
     for chunk in answer:
         # Yield each chunk of the response.
         yield chunk

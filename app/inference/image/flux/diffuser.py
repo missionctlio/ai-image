@@ -17,11 +17,13 @@ def _get_aspect_ratio_dimensions(aspect_ratio: str) -> tuple:
     """
     aspect_ratios = {
         "1:1": (1024, 1024),
-        "3:2": (1504, 1008),
-        "4:3": (1024, 768),
-        "16:9": (960, 540),
-        "21:9": (2560, 1080),
-        "32:9": (1280, 360),
+        "2:3": (1024, 1536),
+        "3:2": (1536, 1024),
+        "4:3": (1280, 960),
+        "3:4": (960, 1280),
+        "16:9": (1920, 1080),
+        "21:9": (2520, 1080),
+        "32:9": (1280, 360),  # Updated after dividing by 4
     }
     
     if aspect_ratio not in aspect_ratios:
@@ -46,7 +48,7 @@ def generate_image(prompt: str, aspect_ratio: str) -> str:
     logger.info("Generating image...")
    
     pipe = FluxPipelineManager()
-    pipe.initialize_pipeline()
+    
     image = pipe.generate_image(prompt,initial_width,initial_height)   
 
     image_id = str(uuid.uuid4())   
