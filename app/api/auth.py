@@ -146,3 +146,17 @@ def verify_google_oauth_token(access_token: str):
         return id_info
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+    
+
+@router.get("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response):
+    """
+    Logs out the user by deleting the access_token and refresh_token cookies.
+    """
+    # Delete the access_token cookie
+    response.delete_cookie(key="access_token", httponly=True)
+
+    # Delete the refresh_token cookie
+    response.delete_cookie(key="refresh_token", httponly=True)
+
+    return {"detail": "Logged out successfully"}

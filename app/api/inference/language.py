@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, Request
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import logging
@@ -12,7 +12,7 @@ from app.api.auth import validate_jwt_token, get_current_user, generate_tokens
 from app.inference.language.llama.chat import generate_chat
 from app.inference.language.llama.description import generate_description
 from app.inference.language.llama.refinement import refined_prompt
-from app.db.redis_config import redis_client
+from app.utils.conversational_memory import ConversationalMemory  # Import the class
 
 # Set up logging configuration
 logger = logging.getLogger(__name__)
@@ -21,6 +21,19 @@ router = APIRouter()
 
 class LanguageRequest(BaseModel):
     userPrompt: str
+
+
+def _escape_html(text: str) -> str:
+    """
+    Escapes HTML special characters in a given text.
+
+    Args:
+        text (str): The text to escape.
+
+    Returns:
+        str: The escaped text.
+    """
+    return html.escape(text)
 
 @router.post("/generate-description")
 async def generate_description_endpoint(request: LanguageRequest, current_user: dict = Depends(get_current_user)):
@@ -38,6 +51,7 @@ async def generate_description_endpoint(request: LanguageRequest, current_user: 
         logger.error(f"Error generating description: {str(e)}")
         logger.exception("Exception details:")  # Logs traceback with exception details
         raise HTTPException(status_code=500, detail="Error generating description")
+
 @router.post("/generate-refined-prompt")
 async def refined_prompt_endpoint(request: LanguageRequest, current_user: dict = Depends(get_current_user)):
     try:
@@ -47,8 +61,18 @@ async def refined_prompt_endpoint(request: LanguageRequest, current_user: dict =
         logger.error(f"Error generating description: {str(e)}")
         raise HTTPException(status_code=500, detail="Error generating description")
 
-def _escape_html(text: str) -> str:
-    return html.escape(text)
+@router.delete("/delete-chat-history")
+def delete_chat_history(current_user: dict = Depends(get_current_user)):
+    conversation_id = str(current_user.uuid)  # use the user_id (sub) as the conversation_id
+    memory = ConversationalMemory(conversation_id)  # Create an instance of ConversationalMemory
+
+    try:
+        # Try to clear the conversation memory
+        memory.clear_memory()
+        return {"status": "success", "message": "Chat history deleted"}
+    except Exception as e:
+        logger.error(f"Failed to clear chat history: {str(e)}")
+        raise HTTPException(status_code=404, detail={"status": "failure", "message": "Chat history not found"})
 
 @router.websocket("/ws/chat")
 async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
@@ -62,7 +86,6 @@ async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(ge
 
     if not access_token and not refresh_token:
         logger.error("Access token and refresh token are missing")
-        #await websocket.close(code=4000)  # Close with an error code
         return
 
     # Function to validate or refresh access token
@@ -86,7 +109,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(ge
                 user_info = validate_jwt_token(refresh_token)
                 logger.info(f"Validated refresh token: {user_info}")
                 # If refresh token is valid, generate a new access token
-                new_access_token, _ = generate_tokens(User(uuid = user_info.get("sub"), email=user_info.get("email"), name=user_info.get("name")))
+                new_access_token, _ = generate_tokens(User(uuid=user_info.get("sub"), email=user_info.get("email"), name=user_info.get("name")))
                 logger.info(f"Generated new access token: {new_access_token}")
                 access_token = new_access_token
                 return user_info, new_access_token
@@ -139,24 +162,3 @@ async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(ge
     except Exception as e:
         logger.error(f"Error occurred: {e}")
         await websocket.send_text("Error: Something went wrong.")
-
-@router.delete("/delete-chat-history")
-def delete_chat_history( current_user: dict = Depends(get_current_user)):
-    conversation_id = str(current_user.uuid)  # use the user_id (sub) as the conversation_id
-    if redis_client.exists(conversation_id):
-        redis_client.delete(conversation_id)
-        return {"status": "success", "message": "Chat history deleted"}
-    else:
-        return {"status": "failure", "message": "Chat history not found"}
-
-def _escape_html(text: str) -> str:
-    """
-    Escapes HTML special characters in a given text.
-
-    Args:
-        text (str): The text to escape.
-
-    Returns:
-        str: The escaped text.
-    """
-    return html.escape(text)
