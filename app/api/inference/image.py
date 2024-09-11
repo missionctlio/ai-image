@@ -131,7 +131,7 @@ def get_active_jobs_from_redis():
         return 0
 
 @router.get("/jobs/queued")
-async def get_queued_jobs():
+async def get_queued_jobs(current_user: dict = Depends(get_current_user)):
     try:
         total_queued_jobs = get_queued_jobs_from_redis()
         total_running_jobs = get_active_jobs_from_redis()
