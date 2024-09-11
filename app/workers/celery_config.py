@@ -11,5 +11,13 @@ celery = Celery(
     result_serializer='json',
     accept_content=['json'],
     timezone='UTC'
-      # Include this file so tasks are registered
 )
+
+# # Use task name prefix
+# celery.conf.task_routes = {
+#     'app.workers.*': {'queue': 'default', 'task_prefix': 'celery_task.'}
+# }
+
+# # Optional: Define task naming conventions globally
+# celery.conf.task_default_exchange = 'default'
+# celery.conf.task_default_routing_key = 'celery_task.default'

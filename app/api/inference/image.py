@@ -1,42 +1,26 @@
 from fastapi import HTTPException, Header, Request, APIRouter, Depends
 from pydantic import BaseModel
 import os
-import traceback
 import logging
 from celery.result import AsyncResult
 from app.workers.images import generate_image_task
-from app.api.auth import get_current_user  # Import the token verification function
-from app.db.database import get_db
-from sqlalchemy.orm import Session
+from app.api.auth import get_current_user
+from typing import Optional
+import redis
+import traceback
+import json
 
 logging = logging.getLogger(__name__)
-
 router = APIRouter()
 
 class PromptRequest(BaseModel):
-    """
-    Request model for generating an image.
-
-    :param userPrompt: The text prompt for image generation.
-    :param aspectRatio: The desired aspect ratio of the generated image.
-    """
     userPrompt: str
     aspectRatio: str
 
 class ImageResponse(BaseModel):
-    """
-    Response model for image generation request.
-
-    :param taskId: The task ID used for polling the status of the image generation.
-    """
     taskId: str
 
 class DeleteImagesRequest(BaseModel):
-    """
-    Request model for deleting images.
-
-    :param image_ids: List of image IDs to be deleted.
-    """
     image_ids: list[str]
 
 @router.post("/generate-image", response_model=ImageResponse)
@@ -67,22 +51,12 @@ async def generate_image_endpoint(
     except Exception as e:
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
-
 @router.delete("/delete-images/", response_model=dict)
 async def delete_images(
     request: DeleteImagesRequest,
     authorization: str = Header(None),
-    current_user: dict = Depends(get_current_user)  # Ensure authentication
+    current_user: dict = Depends(get_current_user)
 ):
-    """
-    Endpoint for deleting images based on their IDs.
-
-    :param request: The request body containing a list of image IDs to delete.
-    :param authorization: Authorization header containing the Bearer token.
-    :param current_user: The current authenticated user.
-    :return: A dictionary containing deleted files and any not found files.
-    :raises HTTPException: If no image IDs are provided.
-    """
     IMAGE_DIR = "frontend/images"
     if not request.image_ids:
         logging.warning("No image IDs provided.")
@@ -90,17 +64,14 @@ async def delete_images(
 
     deleted_files = []
     not_found_files = []
-
     logging.info(f"Attempting to delete {len(request.image_ids)} images.")
 
     for image_id in request.image_ids:
-        # Construct file paths with and without 'original_' prefix
         file_paths = [
             os.path.join(IMAGE_DIR, image_id),
             os.path.join(IMAGE_DIR, f"original_{image_id}")
         ]
 
-        # Try deleting files with and without prefix
         deleted = False
         for file_path in file_paths:
             if os.path.isfile(file_path):
@@ -109,48 +80,62 @@ async def delete_images(
                     deleted_files.append(file_path)
                     logging.info(f"Deleted file: {file_path}")
                     deleted = True
-                    break  # Stop after deleting one version of the file
+                    break
                 except Exception as e:
                     logging.error(f"Failed to delete file: {file_path}. Error: {e}")
 
         if not deleted:
             not_found_files.append(image_id)
-            logging.warning(f"File not found for ID: {image_id}")
+            logging.warning(f"File not found: {image_id}")
 
-    # Response based on the deletion results
-    if not_found_files:
-        response = {
-            "deleted_files": deleted_files,
-            "not_found_files": not_found_files,
-            "detail": "Some files were not found"
-        }
-        logging.info("Deletion completed with some files not found.")
-    else:
-        response = {"deleted_files": deleted_files, "detail": "All specified files deleted successfully"}
-        logging.info("All specified files deleted successfully.")
-
+    response = {
+        "deleted_files": deleted_files,
+        "not_found_files": not_found_files,
+        "detail": "Some files were not found" if not_found_files else "All files deleted successfully"
+    }
+    logging.info("Image deletion completed.")
     return response
 
 @router.get("/task-status/{taskId}", response_model=dict)
 async def get_task_status(taskId: str, authorization: str = Header(None), current_user: dict = Depends(get_current_user)):
-    """
-    Endpoint for checking the status of a task.
-
-    :param taskId: The ID of the task to check.
-    :param authorization: Authorization header containing the Bearer token.
-    :param current_user: The current authenticated user.
-    :return: A dictionary containing the status and result of the task.
-    :raises HTTPException: If an internal error occurs while checking the task status.
-    """
     try:
-        # Check the status of the task
         result = AsyncResult(taskId)
         if result.state == 'SUCCESS':
             return {"status": 'SUCCESS', "result": result.result}
         elif result.state == 'FAILURE':
             return {"status": 'FAILURE', "result": str(result.info)}
-        else:
-            return {"status": result.state}
+        return {"status": result.state}
     except Exception as e:
-        logging.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"Error checking task status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve task status")
+
+r = redis.StrictRedis(host='localhost', port=6379, db=0)
+
+def get_queued_jobs_from_redis():
+    try:
+        queued_jobs = r.lrange('celery', 0, -1)
+        return len(queued_jobs)
+    except Exception as e:
+        logging.error(f"Error getting queued jobs: {e}")
+        return 0
+
+def get_active_jobs_from_redis():
+    try:
+        queued_jobs = r.lrange('celery', 0, -1)
+        active_jobs_count = sum(
+            1 for job in queued_jobs if json.loads(job).get('properties', {}).get('delivery_tag')
+        )
+        return active_jobs_count
+    except Exception as e:
+        logging.error(f"Error getting active jobs: {e}")
+        return 0
+
+@router.get("/jobs/queued")
+async def get_queued_jobs():
+    try:
+        total_queued_jobs = get_queued_jobs_from_redis()
+        total_running_jobs = get_active_jobs_from_redis()
+        return {"queued_jobs": total_queued_jobs, "running_jobs": total_running_jobs}
+    except Exception as e:
+        logging.error(f"Error retrieving job counts: {e}")
+        return {"error": "Failed to retrieve job counts"}

@@ -28,8 +28,6 @@ def generate_image_task(prompt: str, aspect_ratio: str):
     Returns:
     - dict: A dictionary containing:
         - 'image_url' (str): URL of the generated image.
-        - 'refined_prompt' (str): The refined prompt used for generating the image, or {prompt} if not refined.
-        - 'description' (str): Description of the image based on the refined prompt
 
     Raises:
     - Exception: Logs and raises any exceptions encountered during the task execution.
@@ -43,7 +41,7 @@ def generate_image_task(prompt: str, aspect_ratio: str):
         # Construct the image URL
         image_url = f"/images/original_{image_id}.png"
 
-        return {'imageUrl': image_url }
+        return {'imageUrl': image_url}
     except Exception as e:
         # Log the error or handle it as needed
         logger.error(f"Error in generate_image_task: {e}")
