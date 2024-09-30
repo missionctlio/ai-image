@@ -46,28 +46,28 @@ async def http_exception_handler(request, exc):
         content={"detail": exc.detail}
     )
 
-# Mount the 'frontend' directory to serve static files
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+# # Mount the 'frontend' directory to serve static files
+# app.mount("/static", StaticFiles(directory="frontend"), name="static")
 app.mount("/images", StaticFiles(directory="frontend/images"), name="images")
 
-@app.get("/{filename}")
-async def serve_static(filename: str):
-    specific_files = {
-        "android-chrome-192x192.png",
-        "android-chrome-512x512.png",
-        "apple-touch-icon.png",
-        "favicon-16x16.png",
-        "favicon-32x32.png",
-        "favicon.ico"
-    }
-    if filename in specific_files:
-        file_path = f'frontend/{filename}'
-        if os.path.exists(file_path):
-            return FileResponse(file_path)
-        else:
-            raise HTTPException(status_code=404, detail="File not found")
-    else:
-        raise HTTPException(status_code=404, detail="File not found")
+# @app.get("/{filename}")
+# async def serve_static(filename: str):
+#     specific_files = {
+#         "android-chrome-192x192.png",
+#         "android-chrome-512x512.png",
+#         "apple-touch-icon.png",
+#         "favicon-16x16.png",
+#         "favicon-32x32.png",
+#         "favicon.ico"
+#     }
+#     if filename in specific_files:
+#         file_path = f'frontend/{filename}'
+#         if os.path.exists(file_path):
+#             return FileResponse(file_path)
+#         else:
+#             raise HTTPException(status_code=404, detail="File not found")
+#     else:
+#         raise HTTPException(status_code=404, detail="File not found")
 
 from app.api.auth import router as auth_router
 from app.api.inference.image import router as image_router
@@ -77,7 +77,7 @@ from app.api.users import router as user_router
 app.include_router(auth_router, prefix="/auth")
 app.include_router(image_router, prefix="/inference/image")
 app.include_router(language_router, prefix="/inference/language")
-app.include_router(user_router, prefix="/users")
+# app.include_router(user_router, prefix="/users")
 
 Base.metadata.create_all(bind=engine)
 

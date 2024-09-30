@@ -15,8 +15,8 @@ class LlamaModel:
         if hasattr(self, 'initialized') and self.initialized:
             return  # Skip initialization if already done
         self.logger = logging.getLogger(__name__)
-        self.model_name = "QuantFactory/Meta-Llama-3.1-8B-instruct-GGUF"
-        self.model_filename = "Meta-Llama-3.1-8B-Instruct.Q2_K.gguf"
+        self.model_name = "hugging-quants/Llama-3.2-3B-Instruct-Q8_0-GGUF"
+        self.model_filename = "llama-3.2-3b-instruct-q8_0.gguf"
         self.llm = None
         self.redis_client = None  # Initialize redis_client later with conversation_id
         self.initialized = True
